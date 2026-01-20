@@ -1,0 +1,126 @@
+{
+  "identity": {
+    "name": "TSMarket",
+    "persona": "Solar Punk Arcade",
+    "vibe": "High-Energy, Clean, Gamified, Futuristic",
+    "description": "A gamified e-commerce experience that breaks the 'dark mode only' gamer stereotype. It uses high-contrast neon accents on a pristine, pale-mint background to create a 'Solar Punk' aesthetic. Think Mirror's Edge meets Jet Set Radio."
+  },
+  "typography": {
+    "primary_font": "Unbounded",
+    "secondary_font": "Outfit",
+    "mono_font": "JetBrains Mono",
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-black tracking-tighter uppercase",
+      "h2": "text-4xl md:text-5xl font-bold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-bold",
+      "body": "text-base md:text-lg font-medium leading-relaxed",
+      "caption": "text-xs font-mono tracking-widest uppercase"
+    },
+    "import_url": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;500;700&family=Unbounded:wght@400;700;900&display=swap"
+  },
+  "colors": {
+    "palette": {
+      "background": "#F0FDFA",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0F172A",
+      "popover": "#FFFFFF",
+      "popover_foreground": "#0F172A",
+      "primary": "#0D9488",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F0ABFC",
+      "secondary_foreground": "#2E1065",
+      "muted": "#CCFBF1",
+      "muted_foreground": "#0F766E",
+      "accent": "#FFD700",
+      "accent_foreground": "#422006",
+      "destructive": "#FF4D4D",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#99F6E4",
+      "input": "#CCFBF1",
+      "ring": "#0D9488"
+    },
+    "gradients": {
+      "hero": "linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)",
+      "primary_btn": "linear-gradient(90deg, #0D9488 0%, #14B8A6 100%)",
+      "gold_text": "linear-gradient(to bottom, #FFD700, #FDB931)",
+      "glass": "rgba(255, 255, 255, 0.7)"
+    }
+  },
+  "layout": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grid_system": "grid grid-cols-1 md:grid-cols-12 gap-6",
+    "spacing": {
+      "section_padding": "py-20 md:py-32",
+      "component_gap": "gap-8"
+    },
+    "border_radius": {
+      "default": "rounded-xl",
+      "button": "rounded-full",
+      "card": "rounded-2xl"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_rgba(13,148,136,0.3)] transition-all duration-300 hover:scale-105 active:scale-95 font-bold uppercase tracking-wider",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-[0_0_15px_rgba(240,171,252,0.4)] transition-all duration-300 font-bold",
+      "outline": "border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300 font-bold uppercase"
+    },
+    "cards": {
+      "product": "bg-white border border-border hover:border-primary/50 shadow-sm hover:shadow-[0_10px_40px_-10px_rgba(13,148,136,0.2)] transition-all duration-300 group relative overflow-hidden",
+      "feature": "bg-white/50 backdrop-blur-md border border-white/20 shadow-lg hover:-translate-y-2 transition-transform duration-300"
+    },
+    "inputs": {
+      "default": "bg-white border-2 border-input focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-lg px-4 py-3 transition-all duration-200 font-medium placeholder:text-muted-foreground/70"
+    },
+    "navigation": {
+      "wrapper": "fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-border/50",
+      "link": "text-sm font-bold uppercase tracking-widest hover:text-primary transition-colors relative after:content-[''] after:absolute after:bottom-[-4px] after:left-0 after:w-0 after:h-[2px] after:bg-primary hover:after:w-full after:transition-all"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-white/60 border border-white/40 shadow-xl",
+    "neon_glow": "drop-shadow-[0_0_10px_rgba(13,148,136,0.5)]",
+    "textures": "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed opacity-5",
+    "animations": {
+      "hover_lift": "hover:-translate-y-1 transition-transform duration-300",
+      "pulse_slow": "animate-pulse",
+      "spin_slow": "animate-[spin_10s_linear_infinite]"
+    }
+  },
+  "assets": {
+    "logo_url": "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg",
+    "hero_images": [
+      "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1636036826842-39d276c8c5aa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwyfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85"
+    ],
+    "avatars": [
+      "https://images.unsplash.com/photo-1667419674822-1a9195436f1c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxhbmltZSUyMGdhbWVyJTIwYXZhdGFyJTIwcHJvZmlsZSUyMHBpY3R1cmV8ZW58MHx8fHwxNzY3MjM5Njc1fDA&ixlib=rb-4.1.0&q=85",
+      "https://images.unsplash.com/photo-1615843423179-bea071facf96?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwzfHxhbmltZSUyMGdhbWVyJTIwYXZhdGFyJTIwcHJvZmlsZSUyMHBpY3R1cmV8ZW58MHx8fHwxNzY3MjM5Njc1fDA&ixlib=rb-4.1.0&q=85"
+    ],
+    "rewards": [
+      "https://images.unsplash.com/photo-1632809199725-72a4245e846b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwzfHxmdXR1cmlzdGljJTIwbG9vdCUyMGJveCUyMHRyZWFzdXJlJTIwY2hlc3QlMjBnbG93aW5nfGVufDB8fHx8MTc2NzIzOTY3N3ww&ixlib=rb-4.1.0&q=85"
+    ]
+  },
+  "gamification_ui": {
+    "xp_bar": "h-4 bg-muted rounded-full overflow-hidden relative after:absolute after:top-0 after:left-0 after:h-full after:bg-gradient-to-r after:from-primary after:to-secondary after:w-[var(--progress)] after:transition-all after:duration-1000",
+    "badge": "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-accent/20 text-accent-foreground border border-accent/50",
+    "level_indicator": "w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-lg shadow-lg ring-4 ring-white"
+  },
+  "instructions_to_main_agent": [
+    "1. THEME ENFORCEMENT: Do NOT use dark mode by default. The user explicitly asked for a 'light green-aquamarine background'. Use the palette provided.",
+    "2. FONT USAGE: Use 'Unbounded' for all Headings (h1-h3) to give that gamer/tech feel. Use 'Outfit' for body text.",
+    "3. GAMIFICATION: Every interaction should feel like a game. Add hover effects, scaling, and subtle glows to all interactive elements.",
+    "4. COMPONENTS: Customize Shadcn components to match the 'Solar Punk' aesthetic. Remove default rounded-md and use rounded-xl or rounded-full.",
+    "5. IMAGES: Use the provided asset URLs. Do not use placeholders.",
+    "6. LAYOUT: Avoid boring grids. Use the 'Bento' layout strategy for the catalog and profile.",
+    "7. ADMIN PANEL: This is hidden. Keep it functional but consistent with the brand (maybe a 'Dark Mode' version of the site for contrast)."
+  ],
+  "universal_guidelines": [
+    "Avoid generic 'AI slop' designs.",
+    "Use 2-3x more spacing than typical designs.",
+    "Every interaction needs micro-animations.",
+    "Use glass-morphism effects with backdrop filters.",
+    "All interactive elements MUST include data-testid attributes."
+  ]
+}

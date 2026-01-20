@@ -1,0 +1,16 @@
+# TSMarket Robots.txt
+User-agent: *
+Allow: /
+Allow: /catalog
+Allow: /product/
+Allow: /support
+
+Disallow: /admin
+Disallow: /helper
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://tsmarket.tj/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
