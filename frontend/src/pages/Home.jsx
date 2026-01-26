@@ -20,25 +20,33 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Seed database first
-        await seedAPI.seed().catch(() => {});
-        
-        const [productsRes, categoriesRes] = await Promise.all([
-          productsAPI.getAll(),
-          categoriesAPI.getAll(),
-        ]);
-        setProducts(productsRes.data.slice(0, 4));
-        setCategories(categoriesRes.data);
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const fetchData = async () => {
+    try {
+      // Seed database first
+      await seedAPI.seed().catch(() => {});
+      
+      const [productsRes, categoriesRes] = await Promise.all([
+        productsAPI.getAll(),
+        categoriesAPI.getAll(),
+      ]);
+      
+      // ЗАЩИТА: проверяем, что данные - массивы
+      const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
+      const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
+      
+      setProducts(productsData.slice(0, 4));
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+      // Устанавливаем пустые массивы при ошибке
+      setProducts([]);
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchData();
+}, []);
 
   const handleAddToCart = (product) => {
     if (!isAuthenticated) {
