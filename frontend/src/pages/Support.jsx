@@ -57,9 +57,11 @@ export const Support = () => {
   const fetchTickets = async () => {
     try {
       const res = await supportAPI.getUserTickets();
-      setTickets(res.data);
+      // Ensure tickets is always an array
+      setTickets(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
+      setTickets([]);
     }
   };
 
@@ -312,7 +314,7 @@ export const Support = () => {
         </div>
 
         {/* User Tickets */}
-        {isAuthenticated && tickets.length > 0 && (
+        {isAuthenticated && Array.isArray(tickets) && tickets.length > 0 && (
           <div className="tsmarket-card p-6">
             <h2 className="text-2xl font-bold mb-6">
               {language === 'ru' ? 'Мои обращения' : 'Дархостҳои ман'}
