@@ -23,9 +23,11 @@ export const Profile = () => {
     const fetchOrders = async () => {
       try {
         const res = await ordersAPI.getAll();
-        setOrders(res.data);
+        // Ensure orders is always an array
+        setOrders(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
         console.error('Failed to fetch orders:', error);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -157,7 +159,7 @@ export const Profile = () => {
                 <div key={i} className="skeleton h-20 rounded-xl" />
               ))}
             </div>
-          ) : orders.length === 0 ? (
+          ) : !Array.isArray(orders) || orders.length === 0 ? (
             <div className="text-center py-8">
               <ShoppingBag className="w-12 h-12 text-muted-foreground/50 mx-auto mb-2" />
               <p className="text-muted-foreground">{t('profile.noOrders')}</p>
@@ -208,7 +210,7 @@ export const Profile = () => {
                       <div>
                         <p className="font-bold">{order.items?.length || 0} {t('cart.items')}</p>
                         <p className="text-sm text-muted-foreground line-clamp-1">
-                          {order.items?.map((i) => i.product_name).join(', ')}
+                          {Array.isArray(order.items) ? order.items.map((i) => i.product_name).join(', ') : ''}
                         </p>
                       </div>
                       <div className="text-right">
@@ -246,36 +248,6 @@ export const Profile = () => {
               })}
             </div>
           )}
-        </div>
-
-        {/* Achievements */}
-        <div className="tsmarket-card p-6 mt-8" data-testid="achievements">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            {t('profile.achievements')}
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className={`p-4 rounded-xl text-center ${user.level >= 5 ? 'bg-primary/10' : 'bg-muted opacity-50'}`}>
-              <div className="text-2xl mb-1">🌟</div>
-              <p className="text-sm font-bold">{t('profile.achRisingStar')}</p>
-              <p className="text-xs text-muted-foreground">{t('common.level')} 5</p>
-            </div>
-            <div className={`p-4 rounded-xl text-center ${user.level >= 10 ? 'bg-primary/10' : 'bg-muted opacity-50'}`}>
-              <div className="text-2xl mb-1">🐉</div>
-              <p className="text-sm font-bold">{t('profile.achDragon')}</p>
-              <p className="text-xs text-muted-foreground">{t('common.level')} 10</p>
-            </div>
-            <div className={`p-4 rounded-xl text-center ${orders.length >= 5 ? 'bg-primary/10' : 'bg-muted opacity-50'}`}>
-              <div className="text-2xl mb-1">🛒</div>
-              <p className="text-sm font-bold">{t('profile.achShopper')}</p>
-              <p className="text-xs text-muted-foreground">5 {t('admin.orders')}</p>
-            </div>
-            <div className={`p-4 rounded-xl text-center ${user.xp >= 1000 ? 'bg-primary/10' : 'bg-muted opacity-50'}`}>
-              <div className="text-2xl mb-1">✨</div>
-              <p className="text-sm font-bold">{t('profile.achXPHunter')}</p>
-              <p className="text-xs text-muted-foreground">1000 XP</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
