@@ -31,9 +31,9 @@ export const TopUp = () => {
         topupAPI.getRequests(),
         bankCardsAPI.getAll(),
       ]);
-      setSettings(settingsRes.data);
-      setRequests(requestsRes.data);
-      const cards = cardsRes.data || [];
+      setSettings(settingsRes.data || { card_number: '', card_holder: '', additional_info: '' });
+      setRequests(Array.isArray(requestsRes.data) ? requestsRes.data : []);
+      const cards = Array.isArray(cardsRes.data) ? cardsRes.data : [];
       setBankCards(cards);
       if (cards.length > 0 && !selectedCard) {
         setSelectedCard(cards[0]);
@@ -111,8 +111,9 @@ export const TopUp = () => {
     const checkInterval = setInterval(async () => {
       try {
         const res = await topupAPI.getRequests();
-        const pendingRequests = res.data.filter(r => r.status === 'pending');
-        const approvedRecently = res.data.find(r => 
+        const data = Array.isArray(res.data) ? res.data : [];
+        const pendingRequests = data.filter(r => r.status === 'pending');
+        const approvedRecently = data.find(r => 
           r.status === 'approved' && 
           new Date(r.created_at) > new Date(Date.now() - 10 * 60 * 1000) // last 10 minutes
         );
@@ -180,7 +181,7 @@ export const TopUp = () => {
         </div>
 
         {/* Bank Cards Selection */}
-        {bankCards.length > 0 ? (
+        {(Array.isArray(bankCards) && bankCards.length > 0) ? (
           <div className="tsmarket-card p-6 mb-8 border-2 border-primary/30" data-testid="card-info">
             <h3 className="font-bold mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
@@ -277,7 +278,6 @@ export const TopUp = () => {
           </ol>
         </div>
 
-        {/* Submit Request Form */}
         <form onSubmit={handleSubmit} className="tsmarket-card p-6 mb-8" data-testid="topup-form">
           <h3 className="font-bold mb-4">{t('topup.submitRequest')}</h3>
           
@@ -386,7 +386,7 @@ export const TopUp = () => {
         <div className="tsmarket-card p-6" data-testid="request-history">
           <h3 className="font-bold mb-4">{t('topup.requestHistory')}</h3>
           
-          {requests.length === 0 ? (
+          {(!Array.isArray(requests) || requests.length === 0) ? (
             <div className="text-center py-8">
               <Clock className="w-12 h-12 text-muted-foreground/50 mx-auto mb-2" />
               <p className="text-muted-foreground">{t('topup.noRequests')}</p>
