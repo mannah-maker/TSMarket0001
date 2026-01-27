@@ -21,9 +21,11 @@ export const Missions = () => {
   const fetchMissions = useCallback(async () => {
     try {
       const res = await missionsAPI.getAll();
-      setMissions(res.data);
+      // Ensure missions is always an array
+      setMissions(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error('Failed to fetch missions:', error);
+      setMissions([]);
     } finally {
       setLoading(false);
     }
@@ -97,8 +99,9 @@ export const Missions = () => {
     );
   }
 
-  const activeMissions = missions.filter(m => !m.is_claimed);
-  const completedMissions = missions.filter(m => m.is_claimed);
+  // Defensive checks for missions array
+  const activeMissions = Array.isArray(missions) ? missions.filter(m => !m.is_claimed) : [];
+  const completedMissions = Array.isArray(missions) ? missions.filter(m => m.is_claimed) : [];
 
   return (
     <div className="min-h-screen tsmarket-gradient py-8">
