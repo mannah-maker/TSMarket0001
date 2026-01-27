@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// The issue was here: process.env.REACT_APP_BACKEND_URL was undefined.
+// We add a fallback to the current domain or a specific backend URL.
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''; 
 const API = `${BACKEND_URL}/api`;
 
 // Create axios instance with credentials
