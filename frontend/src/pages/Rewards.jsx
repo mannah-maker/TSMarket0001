@@ -22,10 +22,13 @@ export const Rewards = () => {
         rewardsAPI.getAll(),
         wheelAPI.getPrizes(),
       ]);
-      setRewards(rewardsRes.data);
-      setWheelPrizes(prizesRes.data);
+      // Ensure data is always an array
+      setRewards(Array.isArray(rewardsRes.data) ? rewardsRes.data : []);
+      setWheelPrizes(Array.isArray(prizesRes.data) ? prizesRes.data : []);
     } catch (error) {
       console.error('Failed to fetch rewards:', error);
+      setRewards([]);
+      setWheelPrizes([]);
     } finally {
       setLoading(false);
     }
@@ -106,7 +109,7 @@ export const Rewards = () => {
             </p>
           </div>
 
-          {wheelPrizes.length > 0 && (
+          {Array.isArray(wheelPrizes) && wheelPrizes.length > 0 && (
             <div className="flex flex-col items-center">
               {/* Wheel */}
               <div className="relative mb-8">
@@ -216,7 +219,7 @@ export const Rewards = () => {
                 <div key={i} className="skeleton h-20 rounded-xl" />
               ))}
             </div>
-          ) : rewards.length === 0 ? (
+          ) : !Array.isArray(rewards) || rewards.length === 0 ? (
             <div className="text-center py-8">
               <Gift className="w-12 h-12 text-muted-foreground/50 mx-auto mb-2" />
               <p className="text-muted-foreground">No rewards configured yet</p>
