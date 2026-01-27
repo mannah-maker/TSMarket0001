@@ -215,7 +215,14 @@ async def analyze_receipt_with_ai(receipt_image_url: str, expected_amount: float
 
 # Create the main app
 app = FastAPI(title="TSMarket API")
-
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["ts-market0001-yilv.vercel.app", "http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Add rate limiting middleware
 app.add_middleware(RateLimitMiddleware)
 
@@ -2372,14 +2379,6 @@ async def seed_database():
 # Include router
 app.include_router(api_router)
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["https://tsmarket.preview.emergentagent.com", "ts-market0001-yilv.vercel.app", "http://localhost:3000"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
