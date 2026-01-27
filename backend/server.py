@@ -2376,7 +2376,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["https://tsmarket.preview.emergentagent.com", "http://localhost:3000"],
+    allow_origins=["https://tsmarket.preview.emergentagent.com", "ts-market0001-yilv.vercel.app", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
