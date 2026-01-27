@@ -121,7 +121,7 @@ export const Catalog = () => {
             <SelectContent>
               <SelectItem value="all">{t('catalog.allCategories')}</SelectItem>
               {/* Parent categories with subcategories */}
-              {categories.filter(cat => !cat.parent_id).map((parentCat) => {
+              {Array.isArray(categories) ? categories.filter(cat => !cat.parent_id).map((parentCat) => {
                 const subcats = categories.filter(c => c.parent_id === parentCat.category_id);
                 return (
                   <React.Fragment key={parentCat.category_id}>
