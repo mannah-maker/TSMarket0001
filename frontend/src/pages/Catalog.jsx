@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 
 // Helper function to get localized text
 const getLocalizedText = (item, field, lang) => {
+  if (!item) return '';
   if (lang === 'ru' && item[`${field}_ru`]) return item[`${field}_ru`];
   if (lang === 'tj' && item[`${field}_tj`]) return item[`${field}_tj`];
   return item[field] || '';
@@ -39,9 +40,10 @@ export const Catalog = () => {
     const fetchCategories = async () => {
       try {
         const res = await categoriesAPI.getAll();
-        setCategories(res.data);
+        setCategories(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
         console.error('Failed to fetch categories:', error);
+        setCategories([]);
       }
     };
     fetchCategories();
@@ -59,9 +61,10 @@ export const Catalog = () => {
         if (minXP > 0) params.min_xp = minXP;
         
         const res = await productsAPI.getAll(params);
-        setProducts(res.data);
+        setProducts(Array.isArray(res.data) ? res.data : res.data?.products || []);
       } catch (error) {
         console.error('Failed to fetch products:', error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -77,7 +80,7 @@ export const Catalog = () => {
       return;
     }
     addItem(product);
-    toast.success(`${product.name} added to cart!`);
+    toast.success(`${getLocalizedText(product, 'name', lang)} added to cart!`);
   };
 
   const clearFilters = () => {
@@ -88,17 +91,24 @@ export const Catalog = () => {
     setSearchParams({});
   };
 
-  const hasActiveFilters = search || (category && category !== 'all') || priceRange[0] > 0 || priceRange[1] < 10000 || minXP > 0;
+  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeProducts = Array.isArray(products) ? products : [];
+
+  const hasActiveFilters =
+    search ||
+    (category && category !== 'all') ||
+    priceRange[0] > 0 ||
+    priceRange[1] < 10000 ||
+    minXP > 0;
 
   return (
     <div className="min-h-screen tsmarket-gradient py-8" data-testid="catalog-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">{t('catalog.title')}</h1>
-          <p className="text-lg text-muted-foreground">
-            {t('catalog.subtitle')}
-          </p>
+          <p className="text-lg text-muted-foreground">{t('catalog.subtitle')}</p>
         </div>
 
         {/* Search & Filter Bar */}
@@ -110,22 +120,20 @@ export const Catalog = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-12 tsmarket-input"
-              data-testid="search-input"
             />
           </div>
           
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full md:w-48 tsmarket-input" data-testid="category-select">
+            <SelectTrigger className="w-full md:w-48 tsmarket-input">
               <SelectValue placeholder={t('catalog.allCategories')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('catalog.allCategories')}</SelectItem>
-              {/* Parent categories with subcategories */}
-              {Array.isArray(categories) ? categories.filter(cat => !cat.parent_id).map((parentCat) => {
-                const subcats = categories.filter(c => c.parent_id === parentCat.category_id);
+              {safeCategories.filter(cat => !cat.parent_id).map((parentCat) => {
+                const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
                 return (
                   <React.Fragment key={parentCat.category_id}>
-                    <SelectItem value={parentCat.category_id} className="font-medium">
+                    <SelectItem value={parentCat.category_id}>
                       {getLocalizedText(parentCat, 'name', lang)}
                     </SelectItem>
                     {subcats.map((subcat) => (
@@ -143,7 +151,6 @@ export const Catalog = () => {
             variant="outline"
             className="md:hidden rounded-full"
             onClick={() => setShowFilters(!showFilters)}
-            data-testid="filter-toggle-btn"
           >
             <Filter className="w-4 h-4 mr-2" />
             {t('catalog.filters')}
@@ -151,184 +158,64 @@ export const Catalog = () => {
         </div>
 
         <div className="flex gap-8">
-          {/* Sidebar Filters - Desktop */}
+          {/* Sidebar */}
           <aside className={`w-64 shrink-0 ${showFilters ? 'block' : 'hidden'} md:block`}>
-            <div className="tsmarket-card p-6 sticky top-24" data-testid="filters-sidebar">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">{t('catalog.filters')}</h3>
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="text-destructive"
-                    data-testid="clear-filters-btn"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    {t('catalog.clear')}
-                  </Button>
-                )}
-              </div>
+            <div className="tsmarket-card p-6 sticky top-24">
+              <h3 className="font-bold text-lg mb-4">{t('catalog.filters')}</h3>
 
-              {/* Price Range */}
-              <div className="mb-6">
-                <label className="text-sm font-bold mb-3 block">{t('catalog.priceRange')}</label>
-                <Slider
-                  value={priceRange}
-                  onValueChange={setPriceRange}
-                  min={0}
-                  max={10000}
-                  step={100}
-                  className="mb-2"
-                  data-testid="price-slider"
-                />
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{priceRange[0]}</span>
-                  <span>{priceRange[1]}</span>
-                </div>
-              </div>
-
-              {/* Min XP */}
-              <div className="mb-6">
-                <label className="text-sm font-bold mb-3 block">{t('catalog.minXP')}</label>
-                <Slider
-                  value={[minXP]}
-                  onValueChange={([val]) => setMinXP(val)}
-                  min={0}
-                  max={500}
-                  step={10}
-                  className="mb-2"
-                  data-testid="xp-slider"
-                />
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>{minXP} XP</span>
-                  <span>500 XP</span>
-                </div>
-              </div>
-
-              {/* Categories List */}
-              <div>
-                <label className="text-sm font-bold mb-3 block">{t('home.categories')}</label>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => setCategory('all')}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      category === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                    }`}
-                    data-testid="filter-all"
-                  >
-                    {t('catalog.allCategories')}
-                  </button>
-                  {/* Parent categories with subcategories */}
-                  {categories.filter(cat => !cat.parent_id).map((parentCat) => {
-                    const subcats = categories.filter(c => c.parent_id === parentCat.category_id);
-                    return (
-                      <div key={parentCat.category_id}>
-                        <button
-                          onClick={() => setCategory(parentCat.category_id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors font-medium ${
-                            category === parentCat.category_id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                          }`}
-                          data-testid={`filter-${parentCat.slug}`}
-                        >
-                          {getLocalizedText(parentCat, 'name', lang)}
-                        </button>
-                        {/* Subcategories */}
-                        {subcats.length > 0 && (
-                          <div className="ml-3 border-l-2 border-muted pl-2 mt-1 space-y-1">
-                            {subcats.map((subcat) => (
-                              <button
-                                key={subcat.category_id}
-                                onClick={() => setCategory(subcat.category_id)}
-                                className={`w-full text-left px-3 py-1.5 rounded-lg transition-colors text-sm ${
-                                  category === subcat.category_id ? 'bg-primary/80 text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
-                                }`}
-                                data-testid={`filter-${subcat.slug}`}
-                              >
-                                {getLocalizedText(subcat, 'name', lang)}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              {safeCategories.filter(cat => !cat.parent_id).map((parentCat) => {
+                const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
+                return (
+                  <div key={parentCat.category_id}>
+                    <button
+                      onClick={() => setCategory(parentCat.category_id)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted rounded"
+                    >
+                      {getLocalizedText(parentCat, 'name', lang)}
+                    </button>
+                    {subcats.map((subcat) => (
+                      <button
+                        key={subcat.category_id}
+                        onClick={() => setCategory(subcat.category_id)}
+                        className="ml-4 w-full text-left px-3 py-1 text-sm hover:bg-muted rounded"
+                      >
+                        {getLocalizedText(subcat, 'name', lang)}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </aside>
 
-          {/* Products Grid */}
+          {/* Products */}
           <main className="flex-1">
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="skeleton h-80 rounded-2xl" />
-                ))}
-              </div>
-            ) : products.length === 0 ? (
+              <div>Loading...</div>
+            ) : safeProducts.length === 0 ? (
               <div className="empty-state">
-                <Sparkles className="empty-state-icon" />
-                <h3 className="text-xl font-bold mb-2">{t('catalog.noProducts')}</h3>
-                <p className="text-muted-foreground mb-4">{t('catalog.adjustFilters')}</p>
-                <Button onClick={clearFilters} variant="outline" className="rounded-full">
-                  {t('catalog.clear')}
-                </Button>
+                <Sparkles />
+                <p>{t('catalog.noProducts')}</p>
               </div>
             ) : (
-              <>
-                <p className="text-sm text-muted-foreground mb-4" data-testid="results-count">
-                  {products.length} {t('catalog.productsFound')}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                  {products.map((product) => (
-                    <div
-                      key={product.product_id}
-                      className="tsmarket-card tsmarket-card-hover product-card group"
-                      data-testid={`product-${product.product_id}`}
-                    >
-                      <Link to={`/product/${product.product_id}`}>
-                        <div className="aspect-square overflow-hidden">
-                          <img
-                            src={product.image_url}
-                            alt={getLocalizedText(product, 'name', lang)}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        </div>
-                      </Link>
-                      <div className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="category-badge">{product.xp_reward} XP</span>
-                          {product.sizes?.length > 0 && (
-                            <span className="text-xs text-muted-foreground">
-                              {product.sizes.length} sizes
-                            </span>
-                          )}
-                        </div>
-                        <Link to={`/product/${product.product_id}`}>
-                          <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1">
-                            {getLocalizedText(product, 'name', lang)}
-                          </h3>
-                        </Link>
-                        <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
-                          {getLocalizedText(product, 'description', lang)}
-                        </p>
-                        <div className="flex items-center justify-between mt-4">
-                          <span className="text-2xl font-black text-primary">{product.price}</span>
-                          <Button
-                            size="sm"
-                            className="tsmarket-btn-primary rounded-full"
-                            onClick={() => handleAddToCart(product)}
-                            data-testid={`add-to-cart-${product.product_id}`}
-                          >
-                            <ShoppingCart className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {safeProducts.map((product) => (
+                  <div key={product.product_id} className="tsmarket-card p-3">
+                    <Link to={`/product/${product.product_id}`}>
+                      <img
+                        src={product.image_url}
+                        alt={getLocalizedText(product, 'name', lang)}
+                        className="w-full h-40 object-cover"
+                      />
+                    </Link>
+                    <h3>{getLocalizedText(product, 'name', lang)}</h3>
+                    <p>{product.price}</p>
+                    <Button onClick={() => handleAddToCart(product)}>
+                      <ShoppingCart className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             )}
           </main>
         </div>
