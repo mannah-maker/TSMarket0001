@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// The issue was here: process.env.REACT_APP_BACKEND_URL was undefined.
-// We add a fallback to the current domain or a specific backend URL.
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''; 
+// Fixed: Using your actual backend URL on Render
+const BACKEND_URL = 'https://tsmarket0001.onrender.com';
 const API = `${BACKEND_URL}/api`;
 
 // Create axios instance with credentials
