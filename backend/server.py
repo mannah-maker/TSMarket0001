@@ -221,10 +221,10 @@ app = FastAPI(title="TSMarket API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[
-        "https://ts-market0001-yilv.vercel.app",
-        "http://localhost:3000"
-    ],
+    allow_origins=["https://ts-market0001-oek6.vercel.app", "https://ts-market0001-yilv.vercel.app"],
+    allow_origin_regex=r"https://ts-market0001-.*\.vercel\.app",
+    allow_methods=["*"],
+    allow_headers=["*"],
     # Это разрешит любые preview-ссылки от Vercel для вашего проекта
     allow_origin_regex=r"https://ts-market0001-yilv-.*\.vercel\.app",
     allow_methods=["*"],
