@@ -16,7 +16,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - MONGO_URL=mongodb://mongodb:27017/tsmarket
+      - MONGO_URL=mongodb+srv://tsmarket:1234567890@cluster0.qyakzfk.mongodb.net/
       - DB_NAME=tsmarket
       - JWT_SECRET=change-this-to-a-very-long-random-secret-key
     depends_on:
