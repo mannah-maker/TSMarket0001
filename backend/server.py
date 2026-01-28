@@ -221,7 +221,7 @@ app = FastAPI(title="TSMarket API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["ts-market0001-yilv.vercel.app", "http://localhost:3000"],
+    allow_origins=["ts-market0001-yilv.vercel.app", "https://ts-market0001-yilv-mxad2wnck-surushs-projects-d337b470.vercel.app", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
