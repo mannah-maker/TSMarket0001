@@ -959,19 +959,37 @@ async def get_products(
 ):
     query: Dict[str, Any] = {"is_active": True}
     
-    if category:
+    # 1. Фильтр по категории (пропускаем, если выбрано "all")
+    if category and category != "all":
         query["category_id"] = category
+        
+    # 2. Улучшенный поиск (ищет по названию и описанию на двух языках)
     if search:
-        query["name"] = {"$regex": search, "$options": "i"}
-    if min_price is not None:
-        query["price"] = {"$gte": min_price}
-    if max_price is not None:
-        query.setdefault("price", {})["$lte"] = max_price
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"name_ru": {"$regex": search, "$options": "i"}},
+            {"description": {"$regex": search, "$options": "i"}},
+            {"description_ru": {"$regex": search, "$options": "i"}}
+        ]
+    
+    # 3. Правильная фильтрация по цене (объединяем min и max)
+    if min_price is not None or max_price is not None:
+        price_query = {}
+        if min_price is not None:
+            price_query["$gte"] = min_price
+        if max_price is not None:
+            price_query["$lte"] = max_price
+        query["price"] = price_query
+        
+    # 4. Фильтр по XP
     if min_xp is not None:
         query["xp_reward"] = {"$gte": min_xp}
+        
+    # 5. Фильтр по размеру
     if size:
         query["sizes"] = size
     
+    # Получаем до 1000 товаров
     products = await db.products.find(query, {"_id": 0}).to_list(1000)
     return products
 
