@@ -989,8 +989,9 @@ async def get_products(
     if size:
         query["sizes"] = size
     
-    # Получаем до 1000 товаров
-    products = await db.products.find(query, {"_id": 0}).to_list(1000)
+    # Получаем товары с пагинацией (по умолчанию до 100)
+    # Можно добавить параметры skip и limit в аргументы функции для более гибкого управления
+    products = await db.products.find(query, {"_id": 0}).limit(100).to_list(100)
     return products
 
 @api_router.get("/products/{product_id}", response_model=Product)
@@ -1089,8 +1090,14 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     total_discount = 0.0
     total_xp = 0
     
+    # Batch fetch products to avoid N+1 queries
+    product_ids = [item.product_id for item in items]
+    products_cursor = db.products.find({"product_id": {"$in": product_ids}}, {"_id": 0})
+    products_list = await products_cursor.to_list(length=len(product_ids))
+    products_map = {p["product_id"]: p for p in products_list}
+    
     for item in items:
-        product = await db.products.find_one({"product_id": item.product_id}, {"_id": 0})
+        product = products_map.get(item.product_id)
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
         
@@ -1193,8 +1200,17 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     }
 
 @api_router.get("/orders")
-async def get_user_orders(user: User = Depends(require_user)):
-    orders = await db.orders.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+async def get_user_orders(
+    user: User = Depends(require_user),
+    skip: int = 0,
+    limit: int = 50
+):
+    """Get user orders with pagination"""
+    orders = await db.orders.find({"user_id": user.user_id}, {"_id": 0}) \
+        .sort("created_at", -1) \
+        .skip(skip) \
+        .limit(limit) \
+        .to_list(limit)
     return orders
 
 # ==================== TOP-UP ENDPOINTS ====================
