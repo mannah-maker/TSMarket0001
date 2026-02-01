@@ -18,6 +18,42 @@ const getLocalizedText = (item, field, lang) => {
   return item[field] || '';
 };
 
+const ProductCard = ({ product }) => {
+  const { addItem } = useCart();
+  const { lang } = useLanguage();
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  return (
+    <div className="tsmarket-card tsmarket-card-hover product-card group">
+      <Link to={`/product/${product.product_id}`}>
+        <div className="aspect-square overflow-hidden relative bg-muted">
+          {!imageLoaded && (
+            <div className="absolute inset-0 animate-pulse bg-primary/10" />
+          )}
+          <img
+            src={product.image_url}
+            alt={getLocalizedText(product, 'name', lang)}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-cover group-hover:scale-110 transition-all duration-500 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        </div>
+      </Link>
+      <div className="p-4">
+        <h3 className="font-bold text-lg line-clamp-1">{getLocalizedText(product, 'name', lang)}</h3>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-2xl font-black text-primary">{product.price}</span>
+          <Button size="sm" onClick={() => addItem(product)} className="rounded-full w-10 h-10 p-0">
+            <ShoppingCart className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Catalog = () => {
   const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
@@ -27,7 +63,11 @@ export const Catalog = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(0);
+  const ITEMS_PER_PAGE = 12;
   
   // Filters
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -49,10 +89,21 @@ export const Catalog = () => {
   }, []);
 
   useEffect(() => {
+    setPage(0);
+    setProducts([]);
+    setHasMore(true);
+  }, [search, category, priceRange, minXP]);
+
+  useEffect(() => {
     const fetchProducts = async () => {
-      setLoading(true);
+      if (page === 0) setLoading(true);
+      else setLoadingMore(true);
+      
       try {
-        const params = {};
+        const params = {
+          skip: page * ITEMS_PER_PAGE,
+          limit: ITEMS_PER_PAGE
+        };
         if (search) params.search = search;
         if (category && category !== 'all') params.category = category;
         if (priceRange[0] > 0) params.min_price = priceRange[0];
@@ -60,18 +111,25 @@ export const Catalog = () => {
         if (minXP > 0) params.min_xp = minXP;
         
         const res = await productsAPI.getAll(params);
-        setProducts(Array.isArray(res.data) ? res.data : res.data?.products || []);
+        const newProducts = Array.isArray(res.data) ? res.data : res.data?.products || [];
+        
+        if (newProducts.length < ITEMS_PER_PAGE) {
+          setHasMore(false);
+        }
+        
+        setProducts(prev => page === 0 ? newProducts : [...prev, ...newProducts]);
       } catch (error) {
         console.error('Failed to fetch products:', error);
-        setProducts([]);
+        if (page === 0) setProducts([]);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
     
-    const debounce = setTimeout(fetchProducts, 500); // Increased debounce to 500ms for better performance
+    const debounce = setTimeout(fetchProducts, page === 0 ? 500 : 0);
     return () => clearTimeout(debounce);
-  }, [search, category, priceRange, minXP]);
+  }, [search, category, priceRange, minXP, page]);
 
   const handleAddToCart = (product) => {
     if (!isAuthenticated) {
@@ -87,6 +145,7 @@ export const Catalog = () => {
     setCategory('all');
     setPriceRange([0, 10000]);
     setMinXP(0);
+    setPage(0);
     setSearchParams({});
   };
 
@@ -267,28 +326,21 @@ export const Catalog = () => {
                   {safeProducts.length} {t('catalog.productsFound')}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                  {safeProducts.map((product) => (
-                    <div key={product.product_id} className="tsmarket-card tsmarket-card-hover product-card group">
-                      <Link to={`/product/${product.product_id}`}>
-                        <div className="aspect-square overflow-hidden">
-                          <img
-                            src={product.image_url}
-                            alt={getLocalizedText(product, 'name', lang)}
-                            loading="lazy"
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                        </div>
-                      </Link>
-                      <div className="p-4">
-                        <h3 className="font-bold text-lg">{getLocalizedText(product, 'name', lang)}</h3>
-                        <span className="text-2xl font-black text-primary">{product.price}</span>
-                        <Button size="sm" onClick={() => handleAddToCart(product)}>
-                          <ShoppingCart className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {safeProducts.map((product) => <ProductCard key={product.product_id} product={product} />)}
                 </div>
+
+                {hasMore && (
+                  <div className="mt-12 flex justify-center">
+                    <Button 
+                      onClick={() => setPage(prev => prev + 1)} 
+                      disabled={loadingMore}
+                      variant="outline"
+                      className="rounded-full px-8"
+                    >
+                      {loadingMore ? t('common.loading') : t('catalog.loadMore') || 'Load More'}
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </main>
