@@ -955,7 +955,9 @@ async def get_products(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     min_xp: Optional[int] = None,
-    size: Optional[str] = None
+    size: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20
 ):
     query: Dict[str, Any] = {"is_active": True}
     
@@ -989,9 +991,8 @@ async def get_products(
     if size:
         query["sizes"] = size
     
-    # Получаем товары с пагинацией (по умолчанию до 100)
-    # Можно добавить параметры skip и limit в аргументы функции для более гибкого управления
-    products = await db.products.find(query, {"_id": 0}).limit(100).to_list(100)
+    # Получаем товары с пагинацией
+    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     return products
 
 @api_router.get("/products/{product_id}", response_model=Product)
