@@ -69,7 +69,7 @@ export const Catalog = () => {
       }
     };
     
-    const debounce = setTimeout(fetchProducts, 300);
+    const debounce = setTimeout(fetchProducts, 500); // Increased debounce to 500ms for better performance
     return () => clearTimeout(debounce);
   }, [search, category, priceRange, minXP]);
 
