@@ -28,6 +28,7 @@ export const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -101,11 +102,17 @@ export const ProductDetail = () => {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Product Image */}
           <div className="relative">
-            <div className="aspect-square rounded-3xl overflow-hidden tsmarket-card">
+            <div className="aspect-square rounded-3xl overflow-hidden tsmarket-card relative bg-muted">
+              {!imageLoaded && (
+                <div className="absolute inset-0 animate-pulse bg-primary/10" />
+              )}
               <img
                 src={product.image_url}
                 alt={getLocalizedText(product, 'name', lang)}
-                className="w-full h-full object-cover"
+                onLoad={() => setImageLoaded(true)}
+                className={`w-full h-full object-cover transition-opacity duration-500 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
                 data-testid="product-image"
               />
             </div>
