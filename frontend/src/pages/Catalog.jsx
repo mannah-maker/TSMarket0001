@@ -54,6 +54,40 @@ const ProductCard = ({ product }) => {
   );
 };
 
+const ProductMarquee = ({ products, lang }) => {
+  if (!products || products.length === 0) return null;
+  
+  // Duplicate products to create a seamless loop
+  const marqueeProducts = [...products, ...products, ...products];
+  
+  return (
+    <div className="mb-12">
+      <h2 className="text-xl font-bold mb-4 px-4 flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+        {lang === 'ru' ? 'Новинки каталога' : 'Навгониҳои каталог'}
+      </h2>
+      <div className="marquee-container py-4 bg-white/30 backdrop-blur-sm rounded-3xl border border-white/20">
+        <div className="animate-marquee gap-6 px-6">
+          {marqueeProducts.map((product, idx) => (
+            <Link 
+              key={`${product.product_id}-${idx}`} 
+              to={`/product/${product.product_id}`}
+              className="w-40 h-40 shrink-0 tsmarket-card overflow-hidden hover:scale-105 transition-transform duration-300"
+            >
+              <img 
+                src={product.image_url} 
+                alt="" 
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Catalog = () => {
   const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
@@ -164,6 +198,11 @@ export const Catalog = () => {
             {t('catalog.subtitle')}
           </p>
         </div>
+
+        {/* Product Marquee */}
+        {!loading && products.length > 0 && (
+          <ProductMarquee products={products.slice(0, 10)} lang={lang} />
+        )}
 
         {/* Search & Filter Bar */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
