@@ -175,6 +175,32 @@ export const Catalog = () => {
 
               <div>
                 <label className="text-sm font-bold mb-3 block">{t('home.categories')}</label>
+                {/* Фильтр по цене */}
+                <div className="mt-6">
+                  <label className="text-sm font-bold mb-2 block">
+                    {t('catalog.price')} ({priceRange[0]} - {priceRange[1]})
+                  </label>
+                  <Slider
+                    value={priceRange}
+                    min={0}
+                    max={10000}
+                    step={100}
+                    onValueChange={setPriceRange}
+                  />
+                </div>
+                
+                {/* Фильтр по XP */}
+                <div className="mt-6">
+                  <label className="text-sm font-bold mb-2 block">
+                    {t('catalog.minXP')}
+                  </label>
+                  <Input
+                    type="number"
+                    value={minXP}
+                    onChange={(e) => setMinXP(Number(e.target.value))}
+                    placeholder="0"
+                  />
+                </div>
                 <div className="space-y-1">
                   <button
                     onClick={() => setCategory('all')}
