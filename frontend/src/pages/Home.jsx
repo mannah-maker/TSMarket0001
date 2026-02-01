@@ -22,8 +22,8 @@ export const Home = () => {
   useEffect(() => {
   const fetchData = async () => {
     try {
-      // Seed database first
-      await seedAPI.seed().catch(() => {});
+      // Seed database removed from automatic home page load to improve performance
+      // Should be called manually or during initial setup only
       
       const [productsRes, categoriesRes] = await Promise.all([
         productsAPI.getAll(),
