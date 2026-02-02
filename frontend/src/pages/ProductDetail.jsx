@@ -6,7 +6,7 @@ import { productsAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Helper function to get localized text
@@ -29,6 +29,7 @@ export const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -63,6 +64,18 @@ export const ProductDetail = () => {
     
     addItem(product, quantity, selectedSize || null);
     toast.success(`${getLocalizedText(product, 'name', lang)} ${lang === 'ru' ? 'добавлен в корзину!' : 'ба сабад илова шуд!'}`);
+  };
+
+  const productImages = product?.images?.length > 0 ? product.images : [product?.image_url];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % productImages.length);
+    setImageLoaded(false);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + productImages.length) % productImages.length);
+    setImageLoaded(false);
   };
 
   if (loading) {
@@ -100,27 +113,68 @@ export const ProductDetail = () => {
         </Button>
 
         <div className="grid md:grid-cols-2 gap-12">
-          {/* Product Image */}
-          <div className="relative">
-            <div className="aspect-square rounded-3xl overflow-hidden tsmarket-card relative bg-muted">
-              {!imageLoaded && (
-                <div className="absolute inset-0 animate-pulse bg-primary/10" />
+          {/* Product Image Gallery */}
+          <div className="space-y-4">
+            <div className="relative group">
+              <div className="aspect-square rounded-3xl overflow-hidden tsmarket-card relative bg-muted">
+                {!imageLoaded && (
+                  <div className="absolute inset-0 animate-pulse bg-primary/10" />
+                )}
+                <img
+                  src={productImages[currentImageIndex]}
+                  alt={getLocalizedText(product, 'name', lang)}
+                  onLoad={() => setImageLoaded(true)}
+                  className={`w-full h-full object-cover transition-opacity duration-500 ${
+                    imageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  data-testid="product-image"
+                />
+              </div>
+              
+              {/* Navigation Arrows */}
+              {productImages.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-primary" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                  >
+                    <ChevronRight className="w-6 h-6 text-primary" />
+                  </button>
+                </>
               )}
-              <img
-                src={product.image_url}
-                alt={getLocalizedText(product, 'name', lang)}
-                onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-cover transition-opacity duration-500 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                data-testid="product-image"
-              />
+
+              {/* XP Badge */}
+              <div className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-lg">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <span className="font-bold text-primary">+{product.xp_reward} XP</span>
+              </div>
             </div>
-            {/* XP Badge */}
-            <div className="absolute top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-lg">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <span className="font-bold text-primary">+{product.xp_reward} XP</span>
-            </div>
+
+            {/* Thumbnails Strip */}
+            {productImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {productImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setCurrentImageIndex(idx);
+                      setImageLoaded(false);
+                    }}
+                    className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                      currentImageIndex === idx ? 'border-primary scale-105' : 'border-transparent opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
