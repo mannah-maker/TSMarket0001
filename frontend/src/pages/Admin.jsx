@@ -93,7 +93,7 @@ export const Admin = () => {
       const [statsRes, usersRes, productsRes, categoriesRes, codesRes, ordersRes, prizesRes, requestsRes, promoRes, tagsRes] = await Promise.all([
         adminAPI.getStats(),
         adminAPI.getUsers(),
-        productsAPI.getAll(),
+        productsAPI.getAll({ limit: 1000 }),
         categoriesAPI.getAll(),
         adminAPI.getTopupCodes(),
         adminAPI.getOrders(),
@@ -344,6 +344,16 @@ export const Admin = () => {
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to delete user');
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await adminAPI.updateOrderStatus(orderId, newStatus);
+      toast.success(`Статус обновлен: ${newStatus}`);
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка обновления статуса');
     }
   };
 
@@ -1072,7 +1082,7 @@ export const Admin = () => {
               <p className="text-sm text-slate-400 mb-4">
                 Установите скидку в процентах на конкретный товар. Скидка будет применена к оригинальной цене.
               </p>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="space-y-2 max-h-[800px] overflow-y-auto">
                 {products.map((product) => (
                   <div key={product.product_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg gap-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1301,7 +1311,7 @@ export const Admin = () => {
 
             <div className="admin-card">
               <h3 className="font-bold mb-4">{t('admin.products')} ({products.length})</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <div className="space-y-2 max-h-[800px] overflow-y-auto">
                 {products.map((p) => (
                   <div key={p.product_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -1560,25 +1570,99 @@ export const Admin = () => {
           <TabsContent value="orders" className="space-y-6">
             <div className="admin-card">
               <h3 className="font-bold mb-4">{t('admin.orders')} ({orders.length})</h3>
-              <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                {orders.map((o) => (
-                  <div key={o.order_id} className="p-3 bg-slate-700 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-mono text-sm text-slate-400">{o.order_id}</p>
-                      <p className="text-sm">{new Date(o.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">{o.items?.length || 0} {t('cart.items')}</p>
-                      <p className="font-bold text-primary">{o.total} coins • +{o.total_xp} XP</p>
-                    </div>
-                    {o.delivery_address && (
-                      <div className="mt-2 p-2 bg-slate-600 rounded text-sm">
-                        <span className="text-slate-400">📍 {t('cart.deliveryAddress')}:</span>
-                        <p className="text-white">{o.delivery_address}</p>
+              <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
+                {orders.length === 0 ? (
+                  <p className="text-slate-400 text-center py-8">Заказов пока нет</p>
+                ) : (
+                  orders.map((o) => (
+                    <div key={o.order_id} className="p-4 bg-slate-700/50 rounded-xl border border-slate-600 hover:border-primary/30 transition-colors">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+                        <div>
+                          <p className="font-mono text-xs text-slate-400 uppercase tracking-wider">{o.order_id}</p>
+                          <p className="text-sm font-medium">{new Date(o.created_at).toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            o.status === 'delivered' ? 'bg-green-500/20 text-green-500' :
+                            o.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                            o.status === 'shipped' ? 'bg-orange-500/20 text-orange-500' :
+                            o.status === 'confirmed' ? 'bg-blue-500/20 text-blue-500' :
+                            'bg-yellow-500/20 text-yellow-500'
+                          }`}>
+                            {o.status.toUpperCase()}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      <div className="grid md:grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-1">
+                          <p className="text-sm text-slate-400">Состав заказа:</p>
+                          <div className="text-sm">
+                            {o.items?.map((item, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>{item.product_name} x{item.quantity}</span>
+                                <span className="text-slate-400">{item.price * item.quantity} c.</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-slate-600 mt-1 pt-1 flex justify-between font-bold text-primary">
+                              <span>Итого:</span>
+                              <span>{o.total} coins</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {o.delivery_address && (
+                            <div className="p-2 bg-slate-800/50 rounded text-sm">
+                              <span className="text-slate-400 flex items-center gap-1"><MapPin className="w-3 h-3" /> Адрес:</span>
+                              <p className="text-white">{o.delivery_address}</p>
+                            </div>
+                          )}
+                          {o.phone_number && (
+                            <div className="p-2 bg-slate-800/50 rounded text-sm">
+                              <span className="text-slate-400 flex items-center gap-1"><User className="w-3 h-3" /> Телефон:</span>
+                              <p className="text-white">{o.phone_number}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-600">
+                        <Button 
+                          size="sm" 
+                          variant={o.status === 'confirmed' ? 'default' : 'outline'}
+                          className="h-8 text-xs"
+                          onClick={() => handleUpdateOrderStatus(o.order_id, 'confirmed')}
+                        >
+                          <Check className="w-3 h-3 mr-1" /> Одобрить
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant={o.status === 'shipped' ? 'default' : 'outline'}
+                          className="h-8 text-xs"
+                          onClick={() => handleUpdateOrderStatus(o.order_id, 'shipped')}
+                        >
+                          <Truck className="w-3 h-3 mr-1" /> Отправлено
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant={o.status === 'delivered' ? 'default' : 'outline'}
+                          className="h-8 text-xs"
+                          onClick={() => handleUpdateOrderStatus(o.order_id, 'delivered')}
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" /> Доставлено
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant={o.status === 'cancelled' ? 'destructive' : 'outline'}
+                          className="h-8 text-xs"
+                          onClick={() => handleUpdateOrderStatus(o.order_id, 'cancelled')}
+                        >
+                          <XCircle className="w-3 h-3 mr-1" /> Отменить
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>
