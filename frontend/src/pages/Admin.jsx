@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { adminAPI, categoriesAPI, productsAPI, rewardsAPI, wheelAPI } from '../lib/api';
+import { optimizeImage } from '../utils/imageOptimizer';
 import { 
   Settings, Users, Package, Tag, Gift, Sparkles, CreditCard, User,
   Plus, Trash2, ShoppingCart, BarChart3, Loader2, Check, X, Eye, Edit, Clock, CheckCircle, XCircle, Percent, Target, MessageSquare
@@ -598,15 +599,22 @@ export const Admin = () => {
   };
 
   // Image upload handler
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductImages(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of files) {
+      try {
+        const optimized = await optimizeImage(file, { maxWidth: 1000, maxHeight: 1000, quality: 0.8 });
+        setProductImages(prev => [...prev, optimized]);
+      } catch (error) {
+        console.error('Image optimization failed:', error);
+        // Fallback to original if optimization fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProductImages(prev => [...prev, reader.result]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const handleRemoveImage = (index) => {
