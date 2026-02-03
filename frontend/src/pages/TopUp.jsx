@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { topupAPI, bankCardsAPI } from '../lib/api';
+import { optimizeImage } from '../utils/imageOptimizer';
 import { Wallet, Copy, Check, Upload, Clock, CheckCircle, XCircle, Image, AlertCircle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -58,17 +59,23 @@ export const TopUp = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setReceiptPreview(e.target.result);
-        // For demo, use the base64 as URL (in production, upload to storage)
-        setReceiptUrl(e.target.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Optimize receipt image (smaller size is enough for AI/Admin verification)
+        const optimized = await optimizeImage(file, { maxWidth: 800, maxHeight: 800, quality: 0.6 });
+        setReceiptPreview(optimized);
+        setReceiptUrl(optimized);
+      } catch (error) {
+        console.error('Receipt optimization failed:', error);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setReceiptPreview(e.target.result);
+          setReceiptUrl(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
