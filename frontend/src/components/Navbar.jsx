@@ -39,7 +39,7 @@ export const Navbar = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3" data-testid="logo-link">
-              <img src={LOGO_URL} alt="TSMarket" className="h-10 w-10 rounded-full object-cover" />
+              <img src={LOGO_URL} alt="TSMarket" className="h-10 w-10 rounded-full object-cover" loading="eager" />
               <span className="font-bold text-xl tracking-tight hidden sm:block">
                 {t('common.storeName')}
               </span>
