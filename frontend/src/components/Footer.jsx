@@ -14,7 +14,7 @@ export const Footer = () => {
           {/* Logo & Description */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <img src={LOGO_URL} alt="TSMarket" className="h-12 w-12 rounded-full object-cover" />
+              <img src={LOGO_URL} alt="TSMarket" className="h-12 w-12 rounded-full object-cover" loading="lazy" />
               <span className="font-bold text-2xl text-primary">
                 {t('common.storeName')}
               </span>
