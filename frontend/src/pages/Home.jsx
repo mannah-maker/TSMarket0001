@@ -11,6 +11,22 @@ import { toast } from 'sonner';
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
 const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
 
+const ProductImage = ({ src, alt }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-primary/10" />}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setLoaded(true)}
+        loading="lazy"
+        className={`w-full h-full object-cover group-hover:scale-110 transition-all duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </>
+  );
+};
+
 export const Home = () => {
   const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
@@ -209,12 +225,8 @@ export const Home = () => {
                   data-testid={`product-${product.product_id}`}
                 >
                   <Link to={`/product/${product.product_id}`}>
-                    <div className="aspect-square overflow-hidden">
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
+                    <div className="aspect-square overflow-hidden relative bg-muted">
+                      <ProductImage src={product.image_url} alt={product.name} />
                     </div>
                   </Link>
                   <div className="p-4">
