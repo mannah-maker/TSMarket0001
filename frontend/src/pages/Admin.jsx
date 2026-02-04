@@ -57,6 +57,9 @@ export const Admin = () => {
   const [editBalance, setEditBalance] = useState('');
   const [editXP, setEditXP] = useState('');
   
+  // Edit product modal
+  const [editingProduct, setEditingProduct] = useState(null);
+  
   // Admin profile edit
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -93,7 +96,7 @@ export const Admin = () => {
       const [statsRes, usersRes, productsRes, categoriesRes, codesRes, ordersRes, prizesRes, requestsRes, promoRes, tagsRes] = await Promise.all([
         adminAPI.getStats(),
         adminAPI.getUsers(),
-        productsAPI.getAll({ limit: 10000 }),
+        productsAPI.getAll({ limit: 100000 }),
         categoriesAPI.getAll(),
         adminAPI.getTopupCodes(),
         adminAPI.getOrders(),
@@ -181,11 +184,18 @@ export const Admin = () => {
         ...newProduct,
         image_url: imageUrl,
         images: images,
-        sizes: newProduct.sizes ? newProduct.sizes.split(',').map(s => s.trim()) : [],
+        sizes: typeof newProduct.sizes === 'string' ? newProduct.sizes.split(',').map(s => s.trim()).filter(s => s) : newProduct.sizes,
       };
       
-      await productsAPI.create(productData);
-      toast.success('Товар создан!');
+      if (editingProduct) {
+        await productsAPI.update(editingProduct.product_id, productData);
+        toast.success('Товар обновлен!');
+        setEditingProduct(null);
+      } else {
+        await productsAPI.create(productData);
+        toast.success('Товар создан!');
+      }
+
       setNewProduct({ 
         name: '', name_ru: '', name_tj: '',
         description: '', description_ru: '', description_tj: '',
@@ -194,7 +204,7 @@ export const Admin = () => {
       setProductImages([]); // Clear uploaded images
       fetchAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка создания товара');
+      toast.error(error.response?.data?.detail || 'Ошибка сохранения товара');
     }
   };
 
@@ -361,6 +371,28 @@ export const Admin = () => {
     setEditingUser(u);
     setEditBalance(u.balance?.toString() || '0');
     setEditXP(u.xp?.toString() || '0');
+  };
+
+  const handleEditProduct = (p) => {
+    setEditingProduct(p);
+    setNewProduct({
+      ...p,
+      sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '')
+    });
+    setProductImages(p.images || []);
+    // Scroll to form
+    const formElement = document.querySelector('[data-testid="create-product-form"]');
+    if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleCancelEditProduct = () => {
+    setEditingProduct(null);
+    setNewProduct({ 
+      name: '', name_ru: '', name_tj: '',
+      description: '', description_ru: '', description_tj: '',
+      price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
+    });
+    setProductImages([]);
   };
 
   const handleSaveUserEdit = async () => {
@@ -1210,7 +1242,15 @@ export const Admin = () => {
           {/* Products Tab */}
           <TabsContent value="products" className="space-y-6">
             <div className="admin-card" data-testid="create-product-form">
-              <h3 className="font-bold mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> {t('admin.addProduct')}</h3>
+              <h3 className="font-bold mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {editingProduct ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  {editingProduct ? 'Редактировать товар' : t('admin.addProduct')}
+                </div>
+                {editingProduct && (
+                  <Button variant="ghost" size="sm" onClick={handleCancelEditProduct}>Отмена</Button>
+                )}
+              </h3>
               <form onSubmit={handleCreateProduct} className="space-y-4">
                 {/* Multilingual Name Fields */}
                 <div className="p-3 border border-slate-600 rounded-lg">
@@ -1305,7 +1345,16 @@ export const Admin = () => {
                   <p className="text-xs text-slate-400">Выберите одно или несколько изображений. Первое будет главным.</p>
                 </div>
 
-                <Button type="submit" className="w-full md:w-auto">{t('admin.create')}</Button>
+                <div className="flex gap-3">
+                  <Button type="submit" className="flex-1 md:flex-none">
+                    {editingProduct ? 'Сохранить изменения' : t('admin.create')}
+                  </Button>
+                  {editingProduct && (
+                    <Button type="button" variant="outline" onClick={handleCancelEditProduct} className="flex-1 md:flex-none">
+                      Отмена
+                    </Button>
+                  )}
+                </div>
               </form>
             </div>
 
@@ -1321,9 +1370,14 @@ export const Admin = () => {
                         <p className="text-sm text-slate-400">{p.price} coins • {p.xp_reward} XP</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteProduct(p.product_id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditProduct(p)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteProduct(p.product_id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
