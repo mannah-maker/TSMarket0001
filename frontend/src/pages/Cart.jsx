@@ -400,7 +400,6 @@ export const Cart = () => {
                     )}
                   </Button>
                 )}
-
                 <Link to="/catalog">
                   <Button variant="ghost" className="w-full mt-4" data-testid="continue-shopping-btn">
                     {t('cart.continueShopping')}
