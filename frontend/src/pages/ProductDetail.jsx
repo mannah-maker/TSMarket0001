@@ -16,7 +16,6 @@ const getLocalizedText = (item, field, lang) => {
   if (lang === 'tj' && item[`${field}_tj`]) return item[`${field}_tj`];
   return item[field] || '';
 };
-
 export const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
