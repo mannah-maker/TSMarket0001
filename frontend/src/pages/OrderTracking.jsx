@@ -248,7 +248,6 @@ export const OrderTracking = () => {
             </div>
           </div>
         )}
-
         {/* Order Created */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
           {lang === 'ru' ? 'Заказ создан' : 'Фармоиш сохта шуд'}: {new Date(order.created_at).toLocaleString()}
