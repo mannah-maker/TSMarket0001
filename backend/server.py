@@ -991,11 +991,13 @@ async def get_products(
     if size:
         query["sizes"] = size
     
-    # Ограничиваем максимальный лимит для безопасности, но позволяем до 10000 по запросу (для админки)
-    safe_limit = min(limit, 10000)
+    # Для админки позволяем загружать все товары без ограничений
+    # Если лимит больше 1000, считаем это запросом от админки
+    is_admin_request = limit > 1000
+    actual_limit = limit if is_admin_request else min(limit, 100)
     
-    # Получаем товары с пагинацией
-    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(safe_limit).to_list(safe_limit)
+    # Получаем товары
+    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(actual_limit).to_list(actual_limit)
     return products
 
 @api_router.get("/products/{product_id}", response_model=Product)
