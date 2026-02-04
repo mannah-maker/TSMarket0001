@@ -9,7 +9,6 @@ export const useCart = () => {
   }
   return context;
 };
-
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState([]);
 
