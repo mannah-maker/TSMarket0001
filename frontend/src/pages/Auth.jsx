@@ -280,7 +280,6 @@ export const AuthCallback = () => {
 
     processSession();
   }, [navigate, processGoogleAuth, t]);
-
   return (
     <div className="min-h-screen tsmarket-gradient flex items-center justify-center">
       <div className="text-center">
