@@ -1,5 +1,4 @@
 // Translations for TSMarket (Tajik + Russian)
-
 export const translations = {
   tj: {
     // Navigation
