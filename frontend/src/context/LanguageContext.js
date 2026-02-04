@@ -10,7 +10,6 @@ export const useLanguage = () => {
   }
   return context;
 };
-
 export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(() => {
     return localStorage.getItem('tsmarket_lang') || 'ru';
