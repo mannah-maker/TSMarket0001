@@ -93,7 +93,7 @@ export const Admin = () => {
       const [statsRes, usersRes, productsRes, categoriesRes, codesRes, ordersRes, prizesRes, requestsRes, promoRes, tagsRes] = await Promise.all([
         adminAPI.getStats(),
         adminAPI.getUsers(),
-        productsAPI.getAll({ limit: 1000 }),
+        productsAPI.getAll({ limit: 10000 }),
         categoriesAPI.getAll(),
         adminAPI.getTopupCodes(),
         adminAPI.getOrders(),
@@ -1082,7 +1082,7 @@ export const Admin = () => {
               <p className="text-sm text-slate-400 mb-4">
                 Установите скидку в процентах на конкретный товар. Скидка будет применена к оригинальной цене.
               </p>
-              <div className="space-y-2 max-h-[800px] overflow-y-auto">
+              <div className="space-y-2">
                 {products.map((product) => (
                   <div key={product.product_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg gap-4">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1311,7 +1311,7 @@ export const Admin = () => {
 
             <div className="admin-card">
               <h3 className="font-bold mb-4">{t('admin.products')} ({products.length})</h3>
-              <div className="space-y-2 max-h-[800px] overflow-y-auto">
+              <div className="space-y-2">
                 {products.map((p) => (
                   <div key={p.product_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
                     <div className="flex items-center gap-3">
