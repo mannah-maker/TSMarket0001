@@ -59,7 +59,6 @@ const AppRouter = () => {
     </>
   );
 };
-
 function App() {
   return (
     <BrowserRouter>
