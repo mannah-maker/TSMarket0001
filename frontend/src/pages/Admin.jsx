@@ -10,7 +10,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { adminAPI, categoriesAPI, productsAPI, rewardsAPI, wheelAPI } from '../lib/api';
 import { 
   Settings, Users, Package, Tag, Gift, Sparkles, CreditCard, User,
-  Plus, Trash2, ShoppingCart, BarChart3, Loader2, Check, X, Eye, Edit, Clock, CheckCircle, XCircle, Percent, Target, MessageSquare
+  Plus, Trash2, ShoppingCart, BarChart3, Loader2, Check, X, Eye, Edit, Clock, CheckCircle, XCircle, Percent, Target, MessageSquare, MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 
