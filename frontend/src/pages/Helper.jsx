@@ -32,7 +32,7 @@ export const Helper = () => {
     price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
   });
 
-  const isHelper = user?.role === 'helper';
+  const isHelper = user?.role === 'helper' || user?.role === 'admin';
 
   useEffect(() => {
     if (authLoading) return;
