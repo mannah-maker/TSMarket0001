@@ -991,8 +991,8 @@ async def get_products(
     if size:
         query["sizes"] = size
     
-    # Ограничиваем максимальный лимит для безопасности, но позволяем до 1000 по запросу
-    safe_limit = min(limit, 1000)
+    # Ограничиваем максимальный лимит для безопасности, но позволяем до 10000 по запросу (для админки)
+    safe_limit = min(limit, 10000)
     
     # Получаем товары с пагинацией
     products = await db.products.find(query, {"_id": 0}).skip(skip).limit(safe_limit).to_list(safe_limit)
