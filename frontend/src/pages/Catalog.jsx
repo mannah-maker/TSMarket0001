@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,6 +10,22 @@ import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ShoppingCart, Search, Filter, X, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Use global cache if available, otherwise use local object
+const getCache = () => {
+  try {
+    return window.__CATALOG_CACHE__ || { products: null, categories: null, timestamp: 0 };
+  } catch (e) {
+    return { products: null, categories: null, timestamp: 0 };
+  }
+};
+
+const setCache = (data) => {
+  try {
+    window.__CATALOG_CACHE__ = { ...getCache(), ...data };
+  } catch (e) {}
+};
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Helper function to get localized text
 const getLocalizedText = (item, field, lang) => {
@@ -60,9 +76,9 @@ const ProductCard = React.memo(({ product }) => {
 });
 
 const ProductMarquee = React.memo(({ products, lang }) => {
-  // Duplicate products to create a seamless loop
   const marqueeProducts = React.useMemo(() => {
     if (!products || products.length === 0) return [];
+    // Only duplicate if we have products
     return [...products, ...products, ...products];
   }, [products]);
 
@@ -102,15 +118,19 @@ export const Catalog = () => {
   const { t, lang } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Initialize from cache if available
+  const initialCache = getCache();
+  const [products, setProducts] = useState(initialCache.products || []);
+  const [categories, setCategories] = useState(initialCache.categories || []);
+  const [loading, setLoading] = useState(!initialCache.products);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
   const ITEMS_PER_PAGE = 12;
   
+  const initialFetchRef = useRef(false);
+
   // Filters
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
@@ -119,12 +139,18 @@ export const Catalog = () => {
 
   useEffect(() => {
     const fetchCategories = async () => {
+      const cache = getCache();
+      // Use cache if fresh
+      if (cache.categories && Date.now() - cache.timestamp < CACHE_DURATION) {
+        return;
+      }
       try {
         const res = await categoriesAPI.getAll();
-        setCategories(Array.isArray(res.data) ? res.data : []);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setCategories(data);
+        setCache({ categories: data, timestamp: Date.now() });
       } catch (error) {
         console.error('Failed to fetch categories:', error);
-        setCategories([]);
       }
     };
     fetchCategories();
@@ -137,10 +163,19 @@ export const Catalog = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (page === 0) {
+      const isInitial = page === 0;
+      const cache = getCache();
+      const isCacheFresh = cache.products && Date.now() - cache.timestamp < CACHE_DURATION;
+      
+      // If we have cached products and it's the first page of a fresh load, skip loading state
+      if (isInitial && isCacheFresh && !initialFetchRef.current && !search && category === 'all' && priceRange[0] === 0 && priceRange[1] === 10000 && minXP === 0) {
+        setLoading(false);
+        initialFetchRef.current = true;
+        return;
+      }
+
+      if (isInitial) {
         setLoading(true);
-        // Don't clear products immediately to avoid flicker, 
-        // they will be replaced when new data arrives
       } else {
         setLoadingMore(true);
       }
@@ -163,18 +198,25 @@ export const Catalog = () => {
           setHasMore(false);
         }
         
-        setProducts(prev => page === 0 ? newProducts : [...prev, ...newProducts]);
+        setProducts(prev => {
+          const updated = isInitial ? newProducts : [...prev, ...newProducts];
+          // Update cache on initial page load if no filters
+          if (isInitial && !search && category === 'all') {
+            setCache({ products: updated, timestamp: Date.now() });
+          }
+          return updated;
+        });
       } catch (error) {
         console.error('Failed to fetch products:', error);
-        if (page === 0) setProducts([]);
+        if (isInitial) setProducts([]);
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        initialFetchRef.current = true;
       }
     };
     
-    // Reduced debounce for search, immediate for other filters/pagination
-    const delay = search ? 300 : (page === 0 ? 0 : 0);
+    const delay = search ? 300 : 0;
     const debounce = setTimeout(fetchProducts, delay);
     return () => clearTimeout(debounce);
   }, [search, category, priceRange, minXP, page]);
@@ -185,7 +227,7 @@ export const Catalog = () => {
       return;
     }
     addItem(product);
-    toast.success(`${product.name} added to cart!`);
+    toast.success(`${getLocalizedText(product, 'name', lang)} added to cart!`);
   };
 
   const clearFilters = () => {
@@ -213,9 +255,9 @@ export const Catalog = () => {
           </p>
         </div>
 
-        {/* Product Marquee */}
-        {!loading && products.length > 0 && (
-          <ProductMarquee products={products.slice(0, 10)} lang={lang} />
+        {/* Product Marquee - Show even while loading if we have cached data */}
+        {safeProducts.length > 0 && (
+          <ProductMarquee products={safeProducts.slice(0, 10)} lang={lang} />
         )}
 
         {/* Search & Filter Bar */}
@@ -285,118 +327,88 @@ export const Catalog = () => {
                 )}
               </div>
 
-              <div>
-                <label className="text-sm font-bold mb-3 block">{t('home.categories')}</label>
-                {/* Фильтр по цене */}
-                <div className="mt-6">
-                  <label className="text-sm font-bold mb-2 block">
-                    {t('catalog.price')} ({priceRange[0]} - {priceRange[1]})
+              <div className="space-y-8">
+                <div>
+                  <label className="text-sm font-bold mb-4 block">
+                    {t('catalog.priceRange')}: {priceRange[0]} - {priceRange[1]}
                   </label>
                   <Slider
-                    value={priceRange}
-                    min={0}
+                    defaultValue={[0, 10000]}
                     max={10000}
                     step={100}
+                    value={priceRange}
                     onValueChange={setPriceRange}
+                    className="mt-2"
                   />
                 </div>
-                
-                {/* Фильтр по XP */}
-                <div className="mt-6">
-                  <label className="text-sm font-bold mb-2 block">
-                    {t('catalog.minXP')}
+
+                <div>
+                  <label className="text-sm font-bold mb-4 block">
+                    {t('catalog.minXP')}: {minXP} XP
                   </label>
-                  <Input
-                    type="number"
-                    value={minXP}
-                    onChange={(e) => setMinXP(Number(e.target.value))}
-                    placeholder="0"
+                  <Slider
+                    defaultValue={[0]}
+                    max={1000}
+                    step={50}
+                    value={[minXP]}
+                    onValueChange={(val) => setMinXP(val[0])}
+                    className="mt-2"
                   />
-                </div>
-                <div className="space-y-1">
-                  <button
-                    onClick={() => setCategory('all')}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      category === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                    }`}
-                  >
-                    {t('catalog.allCategories')}
-                  </button>
-                  {safeCategories.filter(cat => !cat.parent_id).map((parentCat) => {
-                    const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
-                    return (
-                      <div key={parentCat.category_id}>
-                        <button
-                          onClick={() => setCategory(parentCat.category_id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-colors font-medium ${
-                            category === parentCat.category_id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                          }`}
-                        >
-                          {getLocalizedText(parentCat, 'name', lang)}
-                        </button>
-                        {subcats.length > 0 && (
-                          <div className="ml-3 border-l-2 border-muted pl-2 mt-1 space-y-1">
-                            {subcats.map((subcat) => (
-                              <button
-                                key={subcat.category_id}
-                                onClick={() => setCategory(subcat.category_id)}
-                                className={`w-full text-left px-3 py-1.5 rounded-lg transition-colors text-sm ${
-                                  category === subcat.category_id ? 'bg-primary/80 text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
-                                }`}
-                              >
-                                {getLocalizedText(subcat, 'name', lang)}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
               </div>
             </div>
           </aside>
 
-          <main className="flex-1">
-            {loading ? (
+          <div className="flex-1">
+            {loading && page === 0 && safeProducts.length === 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="skeleton h-80 rounded-2xl" />
+                  <div key={i} className="tsmarket-card p-4 space-y-4">
+                    <div className="aspect-square skeleton rounded-2xl" />
+                    <div className="h-4 skeleton w-3/4" />
+                    <div className="h-8 skeleton w-1/2" />
+                  </div>
                 ))}
               </div>
-            ) : safeProducts.length === 0 ? (
-              <div className="empty-state">
-                <Sparkles className="empty-state-icon" />
-                <h3 className="text-xl font-bold mb-2">{t('catalog.noProducts')}</h3>
-                <p className="text-muted-foreground mb-4">{t('catalog.adjustFilters')}</p>
-                <Button onClick={clearFilters} variant="outline" className="rounded-full">
-                  {t('catalog.clear')}
-                </Button>
-              </div>
-            ) : (
+            ) : safeProducts.length > 0 ? (
               <>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {safeProducts.length} {t('catalog.productsFound')}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                  {safeProducts.map((product) => <ProductCard key={product.product_id} product={product} />)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {safeProducts.map((product) => (
+                    <ProductCard key={product.product_id} product={product} />
+                  ))}
                 </div>
-
+                
                 {hasMore && (
-                  <div className="mt-12 flex justify-center">
-                    <Button 
-                      onClick={() => setPage(prev => prev + 1)} 
-                      disabled={loadingMore}
+                  <div className="mt-12 text-center">
+                    <Button
                       variant="outline"
+                      size="lg"
+                      onClick={() => setPage(prev => prev + 1)}
+                      disabled={loadingMore}
                       className="rounded-full px-8"
+                      data-testid="load-more-btn"
                     >
-                      {loadingMore ? t('common.loading') : t('catalog.loadMore') || 'Load More'}
+                      {loadingMore ? (
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                      ) : null}
+                      {t('catalog.loadMore')}
                     </Button>
                   </div>
                 )}
               </>
+            ) : (
+              <div className="text-center py-20 tsmarket-card">
+                <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">{t('catalog.noProducts')}</h3>
+                <p className="text-muted-foreground mb-6">{t('catalog.tryAdjusting')}</p>
+                <Button onClick={clearFilters} variant="outline" className="rounded-full">
+                  {t('catalog.clearAll')}
+                </Button>
+              </div>
             )}
-          </main>
+          </div>
         </div>
       </div>
     </div>
