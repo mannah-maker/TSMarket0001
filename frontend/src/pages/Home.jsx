@@ -226,13 +226,13 @@ export const Home = () => {
           </div>
 
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="skeleton h-80 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {(products || []).map((product) => (
                 <div
                   key={product.product_id}
@@ -244,25 +244,25 @@ export const Home = () => {
                       <ProductImage src={product.image_url} alt={product.name} />
                     </div>
                   </Link>
-                  <div className="p-4">
+                  <div className="p-3 md:p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="category-badge">{product.xp_reward} XP</span>
+                      <span className="category-badge text-[10px] md:text-xs">{product.xp_reward} XP</span>
                     </div>
                     <Link to={`/product/${product.product_id}`}>
-                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                      <h3 className="font-bold text-sm md:text-lg group-hover:text-primary transition-colors line-clamp-1">
                         {product.name}
                       </h3>
                     </Link>
-                    <p className="text-muted-foreground text-sm mt-1 line-clamp-2">{product.description}</p>
+                    <p className="text-muted-foreground text-[10px] md:text-sm mt-1 line-clamp-2">{product.description}</p>
                     <div className="flex items-center justify-between mt-4">
-                      <span className="text-2xl font-black text-primary">{product.price}</span>
+                      <span className="text-lg md:text-2xl font-black text-primary">{product.price}</span>
                       <Button
                         size="sm"
-                        className="tsmarket-btn-primary rounded-full"
+                        className="tsmarket-btn-primary rounded-full w-8 h-8 md:w-10 md:h-10 p-0 flex items-center justify-center"
                         onClick={() => handleAddToCart(product)}
                         data-testid={`add-to-cart-${product.product_id}`}
                       >
-                        <ShoppingCart className="w-4 h-4" />
+                        <ShoppingCart className="w-3 h-3 md:w-4 h-4" />
                       </Button>
                     </div>
                   </div>
