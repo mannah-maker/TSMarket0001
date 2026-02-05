@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Slider } from '../components/ui/slider';
 import { productsAPI, categoriesAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
@@ -306,19 +306,24 @@ export const Catalog = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('catalog.allCategories')}</SelectItem>
+              <SelectSeparator />
               {parentCategories.map((parentCat) => {
                 const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
                 return (
-                  <React.Fragment key={parentCat.category_id}>
-                    <SelectItem value={parentCat.category_id} className="font-bold text-primary">
+                  <SelectGroup key={parentCat.category_id}>
+                    <SelectLabel className="text-primary font-bold px-2 py-1.5 text-xs uppercase tracking-wider opacity-70">
                       {getLocalizedText(parentCat, 'name', lang)}
+                    </SelectLabel>
+                    <SelectItem value={parentCat.category_id} className="font-medium">
+                      {getLocalizedText(parentCat, 'name', lang)} ({t('catalog.all')})
                     </SelectItem>
                     {subcats.map((subcat) => (
-                      <SelectItem key={subcat.category_id} value={subcat.category_id} className="pl-6 text-sm">
+                      <SelectItem key={subcat.category_id} value={subcat.category_id} className="pl-6">
                         ↳ {getLocalizedText(subcat, 'name', lang)}
                       </SelectItem>
                     ))}
-                  </React.Fragment>
+                    <SelectSeparator />
+                  </SelectGroup>
                 );
               })}
             </SelectContent>
