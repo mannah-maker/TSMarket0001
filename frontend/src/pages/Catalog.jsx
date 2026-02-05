@@ -18,7 +18,7 @@ const getLocalizedText = (item, field, lang) => {
   return item[field] || '';
 };
 
-const ProductCard = ({ product }) => {
+const ProductCard = React.memo(({ product }) => {
   const { addItem } = useCart();
   const { lang } = useLanguage();
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -59,11 +59,11 @@ const ProductCard = ({ product }) => {
   );
 };
 
-const ProductMarquee = ({ products, lang }) => {
+const ProductMarquee = React.memo(({ products, lang }) => {
   if (!products || products.length === 0) return null;
   
   // Duplicate products to create a seamless loop
-  const marqueeProducts = [...products, ...products, ...products];
+  const marqueeProducts = React.useMemo(() => [...products, ...products, ...products], [products]);
   
   return (
     <div className="mb-12">
@@ -129,14 +129,18 @@ export const Catalog = () => {
 
   useEffect(() => {
     setPage(0);
-    setProducts([]);
     setHasMore(true);
   }, [search, category, priceRange, minXP]);
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (page === 0) setLoading(true);
-      else setLoadingMore(true);
+      if (page === 0) {
+        setLoading(true);
+        // Don't clear products immediately to avoid flicker, 
+        // they will be replaced when new data arrives
+      } else {
+        setLoadingMore(true);
+      }
       
       try {
         const params = {
@@ -166,7 +170,9 @@ export const Catalog = () => {
       }
     };
     
-    const debounce = setTimeout(fetchProducts, page === 0 ? 500 : 0);
+    // Reduced debounce for search, immediate for other filters/pagination
+    const delay = search ? 300 : (page === 0 ? 0 : 0);
+    const debounce = setTimeout(fetchProducts, delay);
     return () => clearTimeout(debounce);
   }, [search, category, priceRange, minXP, page]);
 
