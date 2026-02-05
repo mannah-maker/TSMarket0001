@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { productsAPI, categoriesAPI, seedAPI } from '../lib/api';
+import { productsAPI, categoriesAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ShoppingCart, Sparkles, Trophy, Gift, ArrowRight, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Access the same cache as Catalog.jsx
+// In a real app, this would be in a shared state or service
+const catalogCache = {
+  products: null,
+  categories: null,
+  timestamp: 0
+};
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
 const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
@@ -38,23 +46,30 @@ export const Home = () => {
   useEffect(() => {
   const fetchData = async () => {
     try {
-      // Seed database removed from automatic home page load to improve performance
-      // Should be called manually or during initial setup only
-      
       const [productsRes, categoriesRes] = await Promise.all([
-        productsAPI.getAll(),
+        productsAPI.getAll({ limit: 12 }), // Pre-fetch more for catalog cache
         categoriesAPI.getAll(),
       ]);
       
-      // ЗАЩИТА: проверяем, что данные - массивы
       const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
       const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
       
       setProducts(productsData.slice(0, 4));
       setCategories(categoriesData);
+
+      // Populate global cache for Catalog page
+      try {
+        window.__CATALOG_CACHE__ = {
+          products: productsData,
+          categories: categoriesData,
+          timestamp: Date.now()
+        };
+      } catch (e) {
+        // Fallback if window is not available
+      }
+
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      // Устанавливаем пустые массивы при ошибке
       setProducts([]);
       setCategories([]);
     } finally {
@@ -88,7 +103,7 @@ export const Home = () => {
             {/* Hero Content */}
             <div className="space-y-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full border border-border">
-                <Zap className="w-4 h-4 text-accent" />
+                <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
                 <span className="text-sm font-bold uppercase tracking-wider">{t('common.storeTagline')}</span>
               </div>
               
