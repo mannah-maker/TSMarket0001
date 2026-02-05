@@ -51,6 +51,7 @@ export const Admin = () => {
   const [newTag, setNewTag] = useState({ name: '', slug: '', color: '#0D9488' });
   const [newBankCard, setNewBankCard] = useState({ card_number: '', card_holder: '', bank_name: '' });
   const [productImages, setProductImages] = useState([]);
+  const [imageUrls, setImageUrls] = useState(['']);
   
   // Edit user modal
   const [editingUser, setEditingUser] = useState(null);
@@ -167,23 +168,21 @@ export const Admin = () => {
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
-      // Determine image source - uploaded images or URL
-      let imageUrl = newProduct.image_url;
-      let images = [];
+      // Collect all valid URLs
+      const validUrls = imageUrls.filter(url => url.trim().startsWith('http'));
       
-      if (productImages.length > 0) {
-        // Use uploaded images
-        images = productImages;
-        imageUrl = productImages[0]; // First image as main
-      } else if (!imageUrl) {
-        toast.error('Добавьте хотя бы одно изображение');
+      // Combine uploaded images and URLs
+      let allImages = [...productImages, ...validUrls];
+      
+      if (allImages.length === 0) {
+        toast.error('Добавьте хотя бы одно изображение или URL');
         return;
       }
 
       const productData = {
         ...newProduct,
-        image_url: imageUrl,
-        images: images,
+        image_url: allImages[0], // First image is main
+        images: allImages,
         sizes: typeof newProduct.sizes === 'string' ? newProduct.sizes.split(',').map(s => s.trim()).filter(s => s) : newProduct.sizes,
       };
       
@@ -202,6 +201,7 @@ export const Admin = () => {
         price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100, in_stock: true, arrival_date: ''
       });
       setProductImages([]); // Clear uploaded images
+      setImageUrls(['']); // Reset URLs
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка сохранения товара');
@@ -381,7 +381,14 @@ export const Admin = () => {
       arrival_date: p.arrival_date || '',
       sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '')
     });
-    setProductImages(p.images || []);
+    
+    // Set uploaded images
+    setProductImages(p.images?.filter(img => img.startsWith('data:')) || []);
+    
+    // Set URL images
+    const urls = p.images?.filter(img => img.startsWith('http')) || [];
+    setImageUrls(urls.length > 0 ? urls : ['']);
+    
     // Scroll to form
     const formElement = document.querySelector('[data-testid="create-product-form"]');
     if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
@@ -395,6 +402,7 @@ export const Admin = () => {
       price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
     });
     setProductImages([]);
+    setImageUrls(['']);
   };
 
   const handleSaveUserEdit = async () => {
@@ -1309,9 +1317,41 @@ export const Admin = () => {
                     <Label>Размеры (через запятую)</Label>
                     <Input value={newProduct.sizes} onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value})} className="admin-input" placeholder="S, M, L" />
                   </div>
-                  <div>
-                    <Label>URL изображения (опционально)</Label>
-                    <Input value={newProduct.image_url} onChange={(e) => setNewProduct({...newProduct, image_url: e.target.value})} className="admin-input" placeholder="https://..." />
+                  <div className="space-y-2">
+                    <Label>URL изображений</Label>
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input 
+                          value={url} 
+                          onChange={(e) => {
+                            const newUrls = [...imageUrls];
+                            newUrls[index] = e.target.value;
+                            setImageUrls(newUrls);
+                          }} 
+                          className="admin-input flex-1" 
+                          placeholder="https://..." 
+                        />
+                        {imageUrls.length > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== index))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setImageUrls([...imageUrls, ''])}
+                      className="w-full border-dashed"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> Добавить URL
+                    </Button>
                   </div>
                   <div className="flex items-center gap-4 p-3 border border-slate-600 rounded-lg">
                     <div className="flex items-center gap-2">
