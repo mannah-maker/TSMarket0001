@@ -31,6 +31,7 @@ export const Helper = () => {
   const [topupRequests, setTopupRequests] = useState([]);
   const [orders, setOrders] = useState([]);
   const [productImages, setProductImages] = useState([]);
+  const [imageUrls, setImageUrls] = useState(['']);
   const [viewingImage, setViewingImage] = useState(null);
   
   // Edit state
@@ -83,21 +84,21 @@ export const Helper = () => {
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
-      let imageUrl = newProduct.image_url;
-      let images = [];
+      // Collect all valid URLs
+      const validUrls = imageUrls.filter(url => url.trim().startsWith('http'));
       
-      if (productImages.length > 0) {
-        images = productImages;
-        imageUrl = productImages[0];
-      } else if (!imageUrl) {
-        toast.error('Добавьте хотя бы одно изображение');
+      // Combine uploaded images and URLs
+      let allImages = [...productImages, ...validUrls];
+      
+      if (allImages.length === 0) {
+        toast.error('Добавьте хотя бы одно изображение или URL');
         return;
       }
 
       const productData = {
         ...newProduct,
-        image_url: imageUrl,
-        images: images,
+        image_url: allImages[0], // First image is main
+        images: allImages,
         sizes: newProduct.sizes ? (Array.isArray(newProduct.sizes) ? newProduct.sizes : newProduct.sizes.split(',').map(s => s.trim())) : [],
       };
       
@@ -110,6 +111,7 @@ export const Helper = () => {
         in_stock: true, arrival_date: ''
       });
       setProductImages([]);
+      setImageUrls(['']);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка создания товара');
@@ -119,8 +121,21 @@ export const Helper = () => {
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     try {
+      // Collect all valid URLs from the form
+      const validUrls = imageUrls.filter(url => url.trim().startsWith('http'));
+      
+      // Combine uploaded images and URLs
+      let allImages = [...productImages, ...validUrls];
+      
+      if (allImages.length === 0) {
+        toast.error('Добавьте хотя бы одно изображение или URL');
+        return;
+      }
+
       const productData = {
         ...editingProduct,
+        image_url: allImages[0],
+        images: allImages,
         sizes: typeof editingProduct.sizes === 'string' 
           ? editingProduct.sizes.split(',').map(s => s.trim()) 
           : editingProduct.sizes,
@@ -130,6 +145,8 @@ export const Helper = () => {
       toast.success('Товар обновлен!');
       setIsEditDialogOpen(false);
       setEditingProduct(null);
+      setProductImages([]);
+      setImageUrls(['']);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка обновления товара');
@@ -388,15 +405,42 @@ export const Helper = () => {
                         required 
                       />
                     </div>
-                    <div>
-                      <Label className="text-xs">🇹🇯 Тоҷикӣ</Label>
-                      <Input 
-                        value={newProduct.name_tj} 
-                        onChange={(e) => setNewProduct({...newProduct, name_tj: e.target.value})} 
-                        className="admin-input" 
-                        placeholder="Номи тоҷикӣ" 
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>{lang === 'ru' ? 'URL изображений' : 'URL-ҳои тасвирҳо'}</Label>
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input 
+                          value={url} 
+                          onChange={(e) => {
+                            const newUrls = [...imageUrls];
+                            newUrls[index] = e.target.value;
+                            setImageUrls(newUrls);
+                          }} 
+                          className="admin-input flex-1" 
+                          placeholder="https://..." 
+                        />
+                        {imageUrls.length > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="icon" 
+                            onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== index))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setImageUrls([...imageUrls, ''])}
+                      className="w-full border-dashed"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> {lang === 'ru' ? 'Добавить URL' : 'Илова кардани URL'}
+                    </Button>
+                  </div>
                   </div>
                 </div>
 
@@ -554,6 +598,11 @@ export const Helper = () => {
                         variant="outline"
                         onClick={() => {
                           setEditingProduct({...product});
+                          // Set uploaded images
+                          setProductImages(product.images?.filter(img => img.startsWith('data:')) || []);
+                          // Set URL images
+                          const urls = product.images?.filter(img => img.startsWith('http')) || [];
+                          setImageUrls(urls.length > 0 ? urls : ['']);
                           setIsEditDialogOpen(true);
                         }}
                       >
@@ -736,6 +785,71 @@ export const Helper = () => {
                     className="admin-input" 
                     placeholder="S, M, L, XL"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{lang === 'ru' ? 'URL изображений' : 'URL-ҳои тасвирҳо'}</Label>
+                  {imageUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input 
+                        value={url} 
+                        onChange={(e) => {
+                          const newUrls = [...imageUrls];
+                          newUrls[index] = e.target.value;
+                          setImageUrls(newUrls);
+                        }} 
+                        className="admin-input flex-1" 
+                        placeholder="https://..." 
+                      />
+                      {imageUrls.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="icon" 
+                          onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== index))}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setImageUrls([...imageUrls, ''])}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> {lang === 'ru' ? 'Добавить URL' : 'Илова кардани URL'}
+                  </Button>
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">{lang === 'ru' ? 'Загрузить изображения' : 'Боргузории тасвирҳо'}</Label>
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {productImages.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img src={img} alt={`Preview ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-700" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <label className="w-20 h-20 border-2 border-dashed border-slate-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                      <Plus className="w-6 h-6 text-slate-400" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <DialogFooter>
