@@ -258,9 +258,30 @@ export const ProductDetail = () => {
             </div>
 
             {/* Stock Info */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Package className="w-4 h-4" />
-              <span>{product.stock} items in stock</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                {product.in_stock !== false ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-green-500 font-medium">{lang === 'ru' ? 'В наличии' : 'Дар анбор'}</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 text-red-500" />
+                    <span className="text-red-500 font-medium">{lang === 'ru' ? 'Нет в наличии' : 'Дар анбор нест'}</span>
+                  </>
+                )}
+                <span className="text-muted-foreground ml-2">({product.stock} {lang === 'ru' ? 'шт.' : 'дона'})</span>
+              </div>
+              
+              {product.in_stock === false && product.arrival_date && (
+                <div className="flex items-center gap-2 text-sm p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span className="text-blue-500">
+                    {lang === 'ru' ? 'Ожидается прибытие:' : 'Интизори омадан:'} <strong>{product.arrival_date}</strong>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Add to Cart Button */}
@@ -270,7 +291,9 @@ export const ProductDetail = () => {
               data-testid="add-to-cart-btn"
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
-              Add to Cart - {product.price * quantity} coins
+              {product.in_stock !== false 
+                ? `${lang === 'ru' ? 'В корзину' : 'Ба сабад'} - ${product.price * quantity} coins`
+                : (lang === 'ru' ? 'Предзаказ' : 'Пешфармоиш')}
             </Button>
 
             {/* Total XP */}
