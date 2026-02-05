@@ -162,7 +162,18 @@ export const Catalog = () => {
   useEffect(() => {
     setPage(0);
     setHasMore(true);
-  }, [search, category, priceRange, minXP]);
+    
+    // Auto-expand parent if a subcategory is selected
+    if (category !== 'all' && categories.length > 0) {
+      const selectedCat = categories.find(c => c.category_id === category);
+      if (selectedCat && selectedCat.parent_id) {
+        setExpandedParents(prev => ({
+          ...prev,
+          [selectedCat.parent_id]: true
+        }));
+      }
+    }
+  }, [search, category, priceRange, minXP, categories]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -243,8 +254,10 @@ export const Catalog = () => {
   };
 
   const toggleParent = (catId, e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setExpandedParents(prev => ({
       ...prev,
       [catId]: !prev[catId]
@@ -357,14 +370,19 @@ export const Catalog = () => {
                     
                     {parentCategories.map(parentCat => {
                       const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
-                      const isExpanded = expandedParents[parentCat.category_id] || category === parentCat.category_id || subcats.some(s => s.category_id === category);
+                      const isExpanded = expandedParents[parentCat.category_id];
                       const isActive = category === parentCat.category_id;
                       
                       return (
                         <div key={parentCat.category_id} className="space-y-1">
                           <div className="flex items-center group">
                             <button
-                              onClick={() => setCategory(parentCat.category_id)}
+                              onClick={() => {
+                                setCategory(parentCat.category_id);
+                                if (subcats.length > 0) {
+                                  toggleParent(parentCat.category_id);
+                                }
+                              }}
                               className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
                                 isActive ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-muted'
                               }`}
