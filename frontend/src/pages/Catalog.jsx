@@ -60,10 +60,13 @@ const ProductCard = React.memo(({ product }) => {
 });
 
 const ProductMarquee = React.memo(({ products, lang }) => {
-  if (!products || products.length === 0) return null;
-  
   // Duplicate products to create a seamless loop
-  const marqueeProducts = React.useMemo(() => [...products, ...products, ...products], [products]);
+  const marqueeProducts = React.useMemo(() => {
+    if (!products || products.length === 0) return [];
+    return [...products, ...products, ...products];
+  }, [products]);
+
+  if (!products || products.length === 0) return null;
   
   return (
     <div className="mb-12">
