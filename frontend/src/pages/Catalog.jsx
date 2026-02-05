@@ -39,6 +39,11 @@ const ProductCard = ({ product }) => {
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}
           />
+          {product.in_stock === false && (
+            <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg z-10">
+              {lang === 'ru' ? 'НЕТ В НАЛИЧИИ' : 'ДАР АНБОР НЕСТ'}
+            </div>
+          )}
         </div>
       </Link>
       <div className="p-4">
