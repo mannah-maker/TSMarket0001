@@ -57,7 +57,7 @@ const ProductCard = React.memo(({ product }) => {
       </div>
     </div>
   );
-};
+});
 
 const ProductMarquee = React.memo(({ products, lang }) => {
   if (!products || products.length === 0) return null;
@@ -91,7 +91,7 @@ const ProductMarquee = React.memo(({ products, lang }) => {
       </div>
     </div>
   );
-};
+});
 
 export const Catalog = () => {
   const { isAuthenticated } = useAuth();
