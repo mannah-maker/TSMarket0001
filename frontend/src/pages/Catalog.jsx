@@ -62,12 +62,12 @@ const ProductCard = React.memo(({ product }) => {
           )}
         </div>
       </Link>
-      <div className="p-4">
-        <h3 className="font-bold text-lg line-clamp-1">{getLocalizedText(product, 'name', lang)}</h3>
+      <div className="p-3 md:p-4">
+        <h3 className="font-bold text-sm md:text-lg line-clamp-1">{getLocalizedText(product, 'name', lang)}</h3>
         <div className="flex items-center justify-between mt-2">
-          <span className="text-2xl font-black text-primary">{product.price}</span>
-          <Button size="sm" onClick={() => addItem(product)} className="rounded-full w-10 h-10 p-0">
-            <ShoppingCart className="w-4 h-4" />
+          <span className="text-lg md:text-2xl font-black text-primary">{product.price}</span>
+          <Button size="sm" onClick={() => addItem(product)} className="rounded-full w-8 h-8 md:w-10 md:h-10 p-0">
+            <ShoppingCart className="w-3 h-3 md:w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -361,7 +361,7 @@ export const Catalog = () => {
 
           <div className="flex-1">
             {loading && page === 0 && safeProducts.length === 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="tsmarket-card p-4 space-y-4">
                     <div className="aspect-square skeleton rounded-2xl" />
@@ -372,7 +372,7 @@ export const Catalog = () => {
               </div>
             ) : safeProducts.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {safeProducts.map((product) => (
                     <ProductCard key={product.product_id} product={product} />
                   ))}
