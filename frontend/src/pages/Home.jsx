@@ -19,6 +19,13 @@ const catalogCache = {
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
 const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
 
+// Helper function to get localized text
+const getLocalizedText = (item, field, lang) => {
+  if (lang === 'ru' && item[`${field}_ru`]) return item[`${field}_ru`];
+  if (lang === 'tj' && item[`${field}_tj`]) return item[`${field}_tj`];
+  return item[field] || '';
+};
+
 const ProductImage = ({ src, alt }) => {
   const [loaded, setLoaded] = useState(false);
   return (
@@ -38,10 +45,12 @@ const ProductImage = ({ src, alt }) => {
 export const Home = () => {
   const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const parentCategories = categories.filter(cat => !cat.parent_id);
 
   useEffect(() => {
   const fetchData = async () => {
@@ -191,7 +200,7 @@ export const Home = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {(categories || []).map((category) => (
+              {parentCategories.map((category) => (
                 <Link
                   key={category.category_id}
                   to={`/catalog?category=${category.category_id}`}
@@ -199,9 +208,9 @@ export const Home = () => {
                   data-testid={`category-${category.slug}`}
                 >
                   <h3 className="font-bold text-lg group-hover:text-primary transition-colors">
-                    {category.name}
+                    {getLocalizedText(category, 'name', lang)}
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-2">{category.description}</p>
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{getLocalizedText(category, 'description', lang)}</p>
                 </Link>
               ))}
             </div>
