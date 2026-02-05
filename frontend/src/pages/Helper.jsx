@@ -4,11 +4,19 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Switch } from '../components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../components/ui/dialog";
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { adminAPI, productsAPI, categoriesAPI } from '../lib/api';
 import { 
-  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle
+  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle, Edit2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,12 +32,17 @@ export const Helper = () => {
   const [orders, setOrders] = useState([]);
   const [productImages, setProductImages] = useState([]);
   const [viewingImage, setViewingImage] = useState(null);
+  
+  // Edit state
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Form states
   const [newProduct, setNewProduct] = useState({ 
     name: '', name_ru: '', name_tj: '',
     description: '', description_ru: '', description_tj: '',
-    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
+    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100,
+    in_stock: true, arrival_date: ''
   });
 
   const isHelper = user?.role === 'helper' || user?.role === 'admin';
@@ -85,7 +98,7 @@ export const Helper = () => {
         ...newProduct,
         image_url: imageUrl,
         images: images,
-        sizes: newProduct.sizes ? newProduct.sizes.split(',').map(s => s.trim()) : [],
+        sizes: newProduct.sizes ? (Array.isArray(newProduct.sizes) ? newProduct.sizes : newProduct.sizes.split(',').map(s => s.trim())) : [],
       };
       
       await productsAPI.create(productData);
@@ -93,12 +106,44 @@ export const Helper = () => {
       setNewProduct({ 
         name: '', name_ru: '', name_tj: '',
         description: '', description_ru: '', description_tj: '',
-        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
+        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100,
+        in_stock: true, arrival_date: ''
       });
       setProductImages([]);
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка создания товара');
+    }
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+    try {
+      const productData = {
+        ...editingProduct,
+        sizes: typeof editingProduct.sizes === 'string' 
+          ? editingProduct.sizes.split(',').map(s => s.trim()) 
+          : editingProduct.sizes,
+      };
+      
+      await productsAPI.update(editingProduct.product_id, productData);
+      toast.success('Товар обновлен!');
+      setIsEditDialogOpen(false);
+      setEditingProduct(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка обновления товара');
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm(lang === 'ru' ? 'Удалить этот товар?' : 'Ин молро нест кунед?')) return;
+    try {
+      await productsAPI.delete(productId);
+      toast.success(lang === 'ru' ? 'Товар удален' : 'Мол нест шуд');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка удаления');
     }
   };
 
@@ -275,30 +320,28 @@ export const Helper = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {req.receipt_image_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
                           onClick={() => setViewingImage(req.receipt_image_url)}
-                          className="rounded-full"
                         >
-                          <Eye className="w-4 h-4 mr-1" />
+                          <Eye className="w-4 h-4 mr-2" />
                           {lang === 'ru' ? 'Чек' : 'Чек'}
                         </Button>
                       )}
                       {req.status === 'pending' && (
                         <>
-                          <Button
-                            size="sm"
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700"
                             onClick={() => handleApproveTopup(req.request_id)}
-                            className="bg-green-600 hover:bg-green-700 rounded-full"
                           >
                             <Check className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
+                          <Button 
+                            size="sm" 
                             variant="destructive"
                             onClick={() => handleRejectTopup(req.request_id)}
-                            className="rounded-full"
                           >
                             <X className="w-4 h-4" />
                           </Button>
@@ -396,6 +439,33 @@ export const Helper = () => {
                   </div>
                 </div>
 
+                {/* Availability and Arrival */}
+                <div className="grid md:grid-cols-2 gap-4 p-3 border border-slate-600 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>{lang === 'ru' ? 'В наличии' : 'Дар анбор'}</Label>
+                      <p className="text-xs text-slate-400">
+                        {lang === 'ru' ? 'Показывать товар как доступный' : 'Нишон додани мол ҳамчун дастрас'}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={newProduct.in_stock}
+                      onCheckedChange={(checked) => setNewProduct({...newProduct, in_stock: checked})}
+                    />
+                  </div>
+                  <div>
+                    <Label>{lang === 'ru' ? 'Дата прибытия' : 'Санаи омадан'}</Label>
+                    <Input 
+                      type="text" 
+                      value={newProduct.arrival_date || ''} 
+                      onChange={(e) => setNewProduct({...newProduct, arrival_date: e.target.value})} 
+                      className="admin-input" 
+                      placeholder={lang === 'ru' ? 'Напр: 15 февраля' : 'Мис: 15 феврал'}
+                      disabled={newProduct.in_stock}
+                    />
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div className="p-3 border border-slate-600 rounded-lg">
                   <Label className="text-sm text-slate-400 mb-2 block">
@@ -470,8 +540,34 @@ export const Helper = () => {
                       <img src={product.image_url} alt={product.name} className="w-12 h-12 object-cover rounded" />
                       <div>
                         <p className="font-medium">{getLocalizedText(product, 'name')}</p>
-                        <p className="text-sm text-slate-400">{product.price} • {product.xp_reward} XP</p>
+                        <p className="text-sm text-slate-400">
+                          {product.price} • {product.xp_reward} XP • 
+                          <span className={product.in_stock !== false ? "text-green-400 ml-1" : "text-red-400 ml-1"}>
+                            {product.in_stock !== false ? (lang === 'ru' ? 'В наличии' : 'Дар анбор') : (lang === 'ru' ? 'Нет в наличии' : 'Дар анбор нест')}
+                          </span>
+                        </p>
                       </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setEditingProduct({...product});
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      {user?.role === 'admin' && (
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={() => handleDeleteProduct(product.product_id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -551,6 +647,109 @@ export const Helper = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 text-white border-slate-700">
+            <DialogHeader>
+              <DialogTitle>{lang === 'ru' ? 'Редактировать товар' : 'Таҳрири мол'}</DialogTitle>
+            </DialogHeader>
+            {editingProduct && (
+              <form onSubmit={handleUpdateProduct} className="space-y-4 py-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>🇷🇺 Название (RU)</Label>
+                    <Input 
+                      value={editingProduct.name_ru || ''} 
+                      onChange={(e) => setEditingProduct({...editingProduct, name_ru: e.target.value, name: e.target.value})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                  <div>
+                    <Label>🇹🇯 Ном (TJ)</Label>
+                    <Input 
+                      value={editingProduct.name_tj || ''} 
+                      onChange={(e) => setEditingProduct({...editingProduct, name_tj: e.target.value})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>{lang === 'ru' ? 'Цена' : 'Нарх'}</Label>
+                    <Input 
+                      type="number" 
+                      value={editingProduct.price} 
+                      onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value)})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                  <div>
+                    <Label>XP</Label>
+                    <Input 
+                      type="number" 
+                      value={editingProduct.xp_reward} 
+                      onChange={(e) => setEditingProduct({...editingProduct, xp_reward: parseInt(e.target.value)})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                  <div>
+                    <Label>{lang === 'ru' ? 'Сток' : 'Миқдор'}</Label>
+                    <Input 
+                      type="number" 
+                      value={editingProduct.stock} 
+                      onChange={(e) => setEditingProduct({...editingProduct, stock: parseInt(e.target.value)})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 p-3 border border-slate-700 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label>{lang === 'ru' ? 'В наличии' : 'Дар анбор'}</Label>
+                    </div>
+                    <Switch 
+                      checked={editingProduct.in_stock !== false}
+                      onCheckedChange={(checked) => setEditingProduct({...editingProduct, in_stock: checked})}
+                    />
+                  </div>
+                  <div>
+                    <Label>{lang === 'ru' ? 'Дата прибытия' : 'Санаи омадан'}</Label>
+                    <Input 
+                      type="text" 
+                      value={editingProduct.arrival_date || ''} 
+                      onChange={(e) => setEditingProduct({...editingProduct, arrival_date: e.target.value})} 
+                      className="admin-input" 
+                      placeholder="Напр: 15 февраля"
+                      disabled={editingProduct.in_stock !== false}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>{lang === 'ru' ? 'Размеры (через запятую)' : 'Андозаҳо (бо вергул)'}</Label>
+                  <Input 
+                    value={Array.isArray(editingProduct.sizes) ? editingProduct.sizes.join(', ') : editingProduct.sizes || ''} 
+                    onChange={(e) => setEditingProduct({...editingProduct, sizes: e.target.value})} 
+                    className="admin-input" 
+                    placeholder="S, M, L, XL"
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    {lang === 'ru' ? 'Отмена' : 'Бекор кардан'}
+                  </Button>
+                  <Button type="submit">
+                    {lang === 'ru' ? 'Сохранить' : 'Захира кардан'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Image Modal */}
         {viewingImage && (
