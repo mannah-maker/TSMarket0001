@@ -1287,7 +1287,21 @@ export const Admin = () => {
                     <Select value={newProduct.category_id} onValueChange={(v) => setNewProduct({...newProduct, category_id: v})}>
                       <SelectTrigger className="admin-input"><SelectValue placeholder="Выбрать" /></SelectTrigger>
                       <SelectContent>
-                        {categories.map((c) => <SelectItem key={c.category_id} value={c.category_id}>{c.name_ru || c.name}</SelectItem>)}
+                        {categories.filter(c => !c.parent_id).map((parentCat) => {
+                          const subcats = categories.filter(c => c.parent_id === parentCat.category_id);
+                          return (
+                            <React.Fragment key={parentCat.category_id}>
+                              <SelectItem value={parentCat.category_id} className="font-bold text-primary">
+                                {parentCat.name_ru || parentCat.name}
+                              </SelectItem>
+                              {subcats.map((subcat) => (
+                                <SelectItem key={subcat.category_id} value={subcat.category_id} className="pl-6 text-sm">
+                                  ↳ {subcat.name_ru || subcat.name}
+                                </SelectItem>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
