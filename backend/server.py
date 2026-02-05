@@ -967,7 +967,16 @@ async def get_products(
     
     # 1. Фильтр по категории (пропускаем, если выбрано "all")
     if category and category != "all":
-        query["category_id"] = category
+        # Check if this is a parent category
+        cat_doc = await db.categories.find_one({"category_id": category})
+        if cat_doc and cat_doc.get("is_parent"):
+            # Get all subcategories
+            subcats = await db.categories.find({"parent_id": category}).to_list(100)
+            subcat_ids = [s["category_id"] for s in subcats]
+            # Include parent category itself and all its subcategories
+            query["category_id"] = {"$in": [category] + subcat_ids}
+        else:
+            query["category_id"] = category
         
     # 2. Улучшенный поиск (ищет по названию и описанию на двух языках)
     if search:
@@ -2255,7 +2264,7 @@ async def migrate_subcategories(user: User = Depends(require_admin)):
     )
     await db.categories.update_many(
         {"category_id": "cat_collectibles"},
-        {"$set": {"is_parent": False, "parent_id": None}}
+        {"$set": {"is_parent": True, "parent_id": None}}
     )
     
     # Subcategories to add
@@ -2301,7 +2310,7 @@ async def seed_database():
         {"category_id": "cat_gaming", "name": "Gaming", "name_ru": "Игровое", "name_tj": "Бозиҳо", "slug": "gaming", "description": "Gaming peripherals and accessories", "description_ru": "Игровая периферия и аксессуары", "description_tj": "Таҷҳизоти бозӣ ва аксессуарҳо", "is_parent": True, "parent_id": None},
         {"category_id": "cat_clothing", "name": "Clothing", "name_ru": "Одежда", "name_tj": "Либос", "slug": "clothing", "description": "Stylish gaming apparel", "description_ru": "Стильная одежда для геймеров", "description_tj": "Либоси зебо барои бозингарон", "is_parent": True, "parent_id": None},
         {"category_id": "cat_accessories", "name": "Accessories", "name_ru": "Аксессуары", "name_tj": "Аксессуарҳо", "slug": "accessories", "description": "Tech accessories", "description_ru": "Технические аксессуары", "description_tj": "Аксессуарҳои техникӣ", "is_parent": True, "parent_id": None},
-        {"category_id": "cat_collectibles", "name": "Collectibles", "name_ru": "Коллекционное", "name_tj": "Коллексияҳо", "slug": "collectibles", "description": "Limited edition items", "description_ru": "Лимитированные товары", "description_tj": "Молҳои маҳдуд", "is_parent": False, "parent_id": None},
+        {"category_id": "cat_collectibles", "name": "Collectibles", "name_ru": "Коллекционное", "name_tj": "Коллексияҳо", "slug": "collectibles", "description": "Limited edition items", "description_ru": "Лимитированные товары", "description_tj": "Молҳои маҳдуд", "is_parent": True, "parent_id": None},
         
         # Subcategories for Gaming
         {"category_id": "cat_headsets", "name": "Headsets", "name_ru": "Наушники", "name_tj": "Гӯшмонакҳо", "slug": "headsets", "description": "Gaming headsets", "description_ru": "Игровые наушники", "description_tj": "Гӯшмонакҳои бозӣ", "is_parent": False, "parent_id": "cat_gaming"},
