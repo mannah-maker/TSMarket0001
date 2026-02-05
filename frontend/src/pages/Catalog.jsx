@@ -8,7 +8,7 @@ import { productsAPI, categoriesAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ShoppingCart, Search, Filter, X, Sparkles } from 'lucide-react';
+import { ShoppingCart, Search, Filter, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Use global cache if available, otherwise use local object
@@ -136,6 +136,9 @@ export const Catalog = () => {
   const [category, setCategory] = useState(searchParams.get('category') || 'all');
   const [priceRange, setPriceRange] = useState([0, 10000]);
   const [minXP, setMinXP] = useState(0);
+  
+  // UI State for category accordion
+  const [expandedParents, setExpandedParents] = useState({});
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -239,10 +242,21 @@ export const Catalog = () => {
     setSearchParams({});
   };
 
+  const toggleParent = (catId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedParents(prev => ({
+      ...prev,
+      [catId]: !prev[catId]
+    }));
+  };
+
   const hasActiveFilters = search || (category && category !== 'all') || priceRange[0] > 0 || priceRange[1] < 10000 || minXP > 0;
 
   const safeCategories = Array.isArray(categories) ? categories : [];
   const safeProducts = Array.isArray(products) ? products : [];
+
+  const parentCategories = safeCategories.filter(cat => !cat.parent_id);
 
   return (
     <div className="min-h-screen tsmarket-gradient py-8" data-testid="catalog-page">
@@ -279,11 +293,11 @@ export const Catalog = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('catalog.allCategories')}</SelectItem>
-              {safeCategories.filter(cat => !cat.parent_id).map((parentCat) => {
+              {parentCategories.map((parentCat) => {
                 const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
                 return (
                   <React.Fragment key={parentCat.category_id}>
-                    <SelectItem value={parentCat.category_id} className="font-medium">
+                    <SelectItem value={parentCat.category_id} className="font-bold text-primary">
                       {getLocalizedText(parentCat, 'name', lang)}
                     </SelectItem>
                     {subcats.map((subcat) => (
@@ -328,6 +342,66 @@ export const Catalog = () => {
               </div>
 
               <div className="space-y-8">
+                {/* Hierarchical Category Sidebar */}
+                <div>
+                  <label className="text-sm font-bold mb-4 block">{t('catalog.categories')}</label>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setCategory('all')}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                        category === 'all' ? 'bg-primary text-white font-bold' : 'hover:bg-muted'
+                      }`}
+                    >
+                      {t('catalog.allCategories')}
+                    </button>
+                    
+                    {parentCategories.map(parentCat => {
+                      const subcats = safeCategories.filter(c => c.parent_id === parentCat.category_id);
+                      const isExpanded = expandedParents[parentCat.category_id] || category === parentCat.category_id || subcats.some(s => s.category_id === category);
+                      const isActive = category === parentCat.category_id;
+                      
+                      return (
+                        <div key={parentCat.category_id} className="space-y-1">
+                          <div className="flex items-center group">
+                            <button
+                              onClick={() => setCategory(parentCat.category_id)}
+                              className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                                isActive ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-muted'
+                              }`}
+                            >
+                              {getLocalizedText(parentCat, 'name', lang)}
+                            </button>
+                            {subcats.length > 0 && (
+                              <button 
+                                onClick={(e) => toggleParent(parentCat.category_id, e)}
+                                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                              >
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </div>
+                          
+                          {isExpanded && subcats.length > 0 && (
+                            <div className="pl-4 space-y-1 border-l-2 border-primary/10 ml-3">
+                              {subcats.map(subcat => (
+                                <button
+                                  key={subcat.category_id}
+                                  onClick={() => setCategory(subcat.category_id)}
+                                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                                    category === subcat.category_id ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                  }`}
+                                >
+                                  {getLocalizedText(subcat, 'name', lang)}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-sm font-bold mb-4 block">
                     {t('catalog.priceRange')}: {priceRange[0]} - {priceRange[1]}
