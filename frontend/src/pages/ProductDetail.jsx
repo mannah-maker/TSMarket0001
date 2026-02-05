@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -6,7 +6,7 @@ import { productsAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Helper function to get localized text
@@ -16,6 +16,7 @@ const getLocalizedText = (item, field, lang) => {
   if (lang === 'tj' && item[`${field}_tj`]) return item[`${field}_tj`];
   return item[field] || '';
 };
+
 export const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -298,7 +299,7 @@ export const ProductDetail = () => {
 
             {/* Total XP */}
             <p className="text-center text-sm text-muted-foreground">
-              Total XP: <span className="font-bold text-primary">+{product.xp_reward * quantity} XP</span>
+              {lang === 'ru' ? 'Вы заработаете' : 'Шумо ба даст меоред'} <strong>{product.xp_reward * quantity} XP</strong> {lang === 'ru' ? 'всего' : 'дар маҷмӯъ'}
             </p>
           </div>
         </div>
