@@ -40,7 +40,7 @@ export const Admin = () => {
   const [newProduct, setNewProduct] = useState({ 
     name: '', name_ru: '', name_tj: '',
     description: '', description_ru: '', description_tj: '',
-    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
+    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100, in_stock: true, arrival_date: ''
   });
   const [newCategory, setNewCategory] = useState({ name: '', name_ru: '', name_tj: '', slug: '', description: '', parent_id: '' });
   const [newTopupCode, setNewTopupCode] = useState({ code: '', amount: 100 });
@@ -199,7 +199,7 @@ export const Admin = () => {
       setNewProduct({ 
         name: '', name_ru: '', name_tj: '',
         description: '', description_ru: '', description_tj: '',
-        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100 
+        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100, in_stock: true, arrival_date: ''
       });
       setProductImages([]); // Clear uploaded images
       fetchAllData();
@@ -377,6 +377,8 @@ export const Admin = () => {
     setEditingProduct(p);
     setNewProduct({
       ...p,
+      in_stock: p.in_stock !== undefined ? p.in_stock : true,
+      arrival_date: p.arrival_date || '',
       sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '')
     });
     setProductImages(p.images || []);
@@ -1296,6 +1298,28 @@ export const Admin = () => {
                   <div>
                     <Label>URL изображения (опционально)</Label>
                     <Input value={newProduct.image_url} onChange={(e) => setNewProduct({...newProduct, image_url: e.target.value})} className="admin-input" placeholder="https://..." />
+                  </div>
+                  <div className="flex items-center gap-4 p-3 border border-slate-600 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="in_stock">В наличии</Label>
+                      <input 
+                        id="in_stock"
+                        type="checkbox" 
+                        checked={newProduct.in_stock} 
+                        onChange={(e) => setNewProduct({...newProduct, in_stock: e.target.checked})}
+                        className="w-4 h-4 accent-primary"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Label>Дата прибытия (если нет)</Label>
+                      <Input 
+                        value={newProduct.arrival_date || ''} 
+                        onChange={(e) => setNewProduct({...newProduct, arrival_date: e.target.value})} 
+                        className="admin-input" 
+                        placeholder="Напр: 15 февраля" 
+                        disabled={newProduct.in_stock}
+                      />
+                    </div>
                   </div>
                 </div>
                 
