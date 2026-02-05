@@ -336,6 +336,8 @@ class Product(BaseModel):
     images: List[str] = []  # Additional images (URLs or base64)
     sizes: List[str] = []
     stock: int = 100
+    in_stock: bool = True
+    arrival_date: Optional[str] = None
     is_active: bool = True
     discount_percent: float = 0.0  # Admin sets discount on product
     tags: List[str] = []  # List of tag IDs
@@ -355,6 +357,8 @@ class ProductCreate(BaseModel):
     images: List[str] = []  # Base64 or URLs
     sizes: List[str] = []
     stock: int = 100
+    in_stock: bool = True
+    arrival_date: Optional[str] = None
     discount_percent: float = 0.0
     tags: List[str] = []
 
