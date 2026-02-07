@@ -121,6 +121,7 @@ export const adminAPI = {
   getOrders: () => api.get('/admin/orders'),
   getOrderDetails: (orderId) => api.get(`/admin/orders/${orderId}`),
   updateOrderStatus: (orderId, status, note, trackingNumber) => api.put(`/admin/orders/${orderId}/status`, { status, note, tracking_number: trackingNumber }),
+  deleteOrder: (orderId) => api.delete(`/admin/orders/${orderId}`),
   approveReturn: (orderId) => api.post(`/admin/orders/${orderId}/approve-return`),
   // Promo codes
   getPromoCodes: () => api.get('/admin/promo-codes'),
