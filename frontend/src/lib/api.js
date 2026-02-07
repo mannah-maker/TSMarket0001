@@ -154,6 +154,12 @@ export const adminAPI = {
   uploadImage: (image) => api.post('/admin/upload-image', { image }),
 };
 
+// Delivery API
+export const deliveryAPI = {
+  getAvailableOrders: () => api.get('/delivery/orders'),
+  takeOrder: (orderId) => api.post(`/delivery/orders/${orderId}/take`),
+};
+
 // Bank cards API (public)
 export const bankCardsAPI = {
   getAll: () => api.get('/bank-cards'),
