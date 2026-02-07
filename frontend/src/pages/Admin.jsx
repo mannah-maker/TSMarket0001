@@ -1949,14 +1949,16 @@ export const Admin = () => {
                       <SelectItem value="xp">XP</SelectItem>
                       <SelectItem value="spin">Вращения колеса</SelectItem>
                     </SelectContent>
-                                  <div className="space-y-2">
-                    <Label>Награда (значение)</Label>
-                    <Input type="number" value={newMission.reward_value} onChange={(e) => setNewMission({...newMission, reward_value: parseFloat(e.target.value)})} className="admin-input" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Мин. уровень</Label>
-                    <Input type="number" value={newMission.min_level} onChange={(e) => setNewMission({...newMission, min_level: parseInt(e.target.value)})} className="admin-input" required min="1" />
-                  </div>>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Награда (значение)</Label>
+                  <Input type="number" value={newMission.reward_value} onChange={(e) => setNewMission({...newMission, reward_value: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Мин. уровень</Label>
+                  <Input type="number" value={newMission.min_level} onChange={(e) => setNewMission({...newMission, min_level: parseInt(e.target.value)})} className="admin-input" required min="1" />
+                </div>
                 <div className="md:col-span-3 flex justify-end gap-2">
                   {editingMission && (
                     <Button type="button" variant="outline" onClick={handleCancelEditMission}>Отмена</Button>
