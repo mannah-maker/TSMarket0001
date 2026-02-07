@@ -64,7 +64,7 @@ export const ordersAPI = {
   }),
   getAll: () => api.get('/orders'),
   track: (orderId) => api.get(`/orders/${orderId}/track`),
-  return: (orderId) => api.post(`/orders/${orderId}/return`),
+  return: (orderId) => api.post(`/orders/${orderId}/return-request`),
 };
 
 // Promo API
@@ -96,6 +96,8 @@ export const wheelAPI = {
 // Admin API
 export const adminAPI = {
   getStats: () => api.get('/admin/stats'),
+  updateRevenue: (revenue) => api.put('/admin/stats/revenue', null, { params: { revenue } }),
+  resetRevenue: () => api.delete('/admin/stats/revenue'),
   getUsers: () => api.get('/admin/users'),
   toggleAdmin: (userId, isAdmin) => api.put(`/admin/users/${userId}/admin`, null, { params: { is_admin: isAdmin } }),
   deleteUser: (userId) => api.delete(`/admin/users/${userId}`),
@@ -119,6 +121,7 @@ export const adminAPI = {
   getOrders: () => api.get('/admin/orders'),
   getOrderDetails: (orderId) => api.get(`/admin/orders/${orderId}`),
   updateOrderStatus: (orderId, status, note, trackingNumber) => api.put(`/admin/orders/${orderId}/status`, { status, note, tracking_number: trackingNumber }),
+  approveReturn: (orderId) => api.post(`/admin/orders/${orderId}/approve-return`),
   // Promo codes
   getPromoCodes: () => api.get('/admin/promo-codes'),
   createPromoCode: (data) => api.post('/admin/promo-codes', data),
