@@ -294,7 +294,7 @@ export const Admin = () => {
   };
 
   const handleApproveReturn = async (orderId) => {
-    if (!window.confirm('Одобрить возврат? 90% стоимости будет автоматически возвращено на баланс пользователя.')) return;
+    if (!window.confirm('Одобрить возврат? 90% от фактически оплаченной суммы будет автоматически возвращено на баланс пользователя.')) return;
     try {
       await adminAPI.approveReturn(orderId);
       toast.success('Возврат одобрен, средства возвращены');
