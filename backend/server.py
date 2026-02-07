@@ -235,7 +235,9 @@ api_router = APIRouter(prefix="/api")
 
 security = HTTPBearer(auto_error=False)
 
-# ==================== MODELS ====================
+# ==================== AUTH ======================
+
+
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -498,7 +500,23 @@ class Reward(BaseModel):
     description: str
     reward_type: str  # "coins", "xp_boost", "discount", "exclusive"
     value: float
+
     is_exclusive: bool = False  # For every 10 levels
+
+class Review(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    review_id: str = Field(default_factory=lambda: f"rev_{uuid.uuid4().hex[:12]}")
+    product_id: str
+    user_id: str
+    user_name: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ReviewCreate(BaseModel):
+    product_id: str
+    rating: int = Field(..., ge=1, le=5)
+    comment: str
 
 class RewardCreate(BaseModel):
     level_required: int
@@ -875,6 +893,28 @@ async def process_google_session(request: Request, response: Response):
     
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
     return {"user": user, "token": session_token}
+
+# ==================== REVIEWS ====================
+
+@api_router.post("/reviews", response_model=Review)
+async def create_review(review_data: ReviewCreate, user: User = Depends(get_current_user)):
+    product = await db.products.find_one({"product_id": review_data.product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    review = Review(
+        **review_data.model_dump(),
+        user_id=user.user_id,
+        user_name=user.name,
+    )
+
+    await db.reviews.insert_one(review.model_dump(by_alias=True))
+    return review
+
+@api_router.get("/reviews/{product_id}", response_model=List[Review])
+async def get_reviews_for_product(product_id: str):
+    reviews = await db.reviews.find({"product_id": product_id}).sort("created_at", -1).to_list(100)
+    return reviews
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_user)):
