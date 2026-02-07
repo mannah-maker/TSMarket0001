@@ -60,6 +60,9 @@ export const Admin = () => {
   
   // Edit product modal
   const [editingProduct, setEditingProduct] = useState(null);
+  const [editingReward, setEditingReward] = useState(null);
+  const [editingPrize, setEditingPrize] = useState(null);
+  const [editingMission, setEditingMission] = useState(null);
   
   // Admin profile edit
   const [adminEmail, setAdminEmail] = useState('');
@@ -419,19 +422,46 @@ export const Admin = () => {
   };
 
   // Reward handlers
+  const handleEditReward = (r) => {
+    setEditingReward(r);
+    setNewReward({
+      level_required: r.level_required,
+      name: r.name,
+      description: r.description,
+      reward_type: r.reward_type,
+      value: r.value,
+      is_exclusive: r.is_exclusive || false
+    });
+    // Scroll to form
+    const formElement = document.querySelector('[data-testid="reward-form"]');
+    if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleCancelEditReward = () => {
+    setEditingReward(null);
+    setNewReward({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
+  };
+
   const handleCreateReward = async (e) => {
     e.preventDefault();
     try {
-      await adminAPI.createReward(newReward);
-      toast.success('Reward created');
+      if (editingReward) {
+        await adminAPI.updateReward(editingReward.reward_id, newReward);
+        toast.success('Reward updated');
+        setEditingReward(null);
+      } else {
+        await adminAPI.createReward(newReward);
+        toast.success('Reward created');
+      }
       setNewReward({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
       fetchAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create reward');
+      toast.error(error.response?.data?.detail || 'Failed to save reward');
     }
   };
 
   const handleDeleteReward = async (id) => {
+    if (!window.confirm('Удалить эту награду?')) return;
     try {
       await adminAPI.deleteReward(id);
       toast.success('Reward deleted');
@@ -442,19 +472,45 @@ export const Admin = () => {
   };
 
   // Wheel prize handlers
+  const handleEditPrize = (p) => {
+    setEditingPrize(p);
+    setNewPrize({
+      name: p.name,
+      prize_type: p.prize_type,
+      value: p.value,
+      probability: p.probability,
+      color: p.color || '#0D9488'
+    });
+    // Scroll to form
+    const formElement = document.querySelector('[data-testid="prize-form"]');
+    if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleCancelEditPrize = () => {
+    setEditingPrize(null);
+    setNewPrize({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
+  };
+
   const handleCreatePrize = async (e) => {
     e.preventDefault();
     try {
-      await adminAPI.createWheelPrize(newPrize);
-      toast.success('Prize created');
+      if (editingPrize) {
+        await adminAPI.updateWheelPrize(editingPrize.prize_id, newPrize);
+        toast.success('Prize updated');
+        setEditingPrize(null);
+      } else {
+        await adminAPI.createWheelPrize(newPrize);
+        toast.success('Prize created');
+      }
       setNewPrize({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
       fetchAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create prize');
+      toast.error(error.response?.data?.detail || 'Failed to save prize');
     }
   };
 
   const handleDeletePrize = async (id) => {
+    if (!window.confirm('Удалить этот приз?')) return;
     try {
       await adminAPI.deleteWheelPrize(id);
       toast.success('Prize deleted');
@@ -513,6 +569,26 @@ export const Admin = () => {
   };
 
   // Mission handlers
+  const handleEditMission = (m) => {
+    setEditingMission(m);
+    setNewMission({
+      title: m.title,
+      description: m.description,
+      mission_type: m.mission_type,
+      target_value: m.target_value,
+      reward_type: m.reward_type,
+      reward_value: m.reward_value
+    });
+    // Scroll to form
+    const formElement = document.querySelector('[data-testid="mission-form"]');
+    if (formElement) formElement.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleCancelEditMission = () => {
+    setEditingMission(null);
+    setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+  };
+
   const handleCreateMission = async (e) => {
     e.preventDefault();
     if (!newMission.title.trim()) {
@@ -520,16 +596,23 @@ export const Admin = () => {
       return;
     }
     try {
-      await adminAPI.createMission(newMission);
-      toast.success('Миссия создана!');
+      if (editingMission) {
+        await adminAPI.updateMission(editingMission.mission_id, newMission);
+        toast.success('Миссия обновлена!');
+        setEditingMission(null);
+      } else {
+        await adminAPI.createMission(newMission);
+        toast.success('Миссия создана!');
+      }
       setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
       fetchAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка создания миссии');
+      toast.error(error.response?.data?.detail || 'Ошибка сохранения миссии');
     }
   };
 
   const handleDeleteMission = async (id) => {
+    if (!window.confirm('Удалить эту миссию?')) return;
     try {
       await adminAPI.deleteMission(id);
       toast.success('Миссия удалена');
@@ -1581,8 +1664,11 @@ export const Admin = () => {
 
           {/* Rewards Tab */}
           <TabsContent value="rewards" className="space-y-6">
-            <div className="admin-card">
-              <h3 className="font-bold mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> {t('admin.addReward')}</h3>
+            <div className="admin-card" data-testid="reward-form">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingReward ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingReward ? 'Редактировать награду' : t('admin.addReward')}
+              </h3>
               <form onSubmit={handleCreateReward} className="grid md:grid-cols-3 gap-4">
                 <div>
                   <Label>Требуемый уровень</Label>
@@ -1616,7 +1702,12 @@ export const Admin = () => {
                     <input type="checkbox" checked={newReward.is_exclusive} onChange={(e) => setNewReward({...newReward, is_exclusive: e.target.checked})} />
                     Эксклюзив
                   </label>
-                  <Button type="submit">{t('admin.create')}</Button>
+                  <div className="flex gap-2">
+                    <Button type="submit">{editingReward ? 'Сохранить' : t('admin.create')}</Button>
+                    {editingReward && (
+                      <Button type="button" variant="outline" onClick={handleCancelEditReward}>Отмена</Button>
+                    )}
+                  </div>
                 </div>
               </form>
             </div>
@@ -1630,9 +1721,14 @@ export const Admin = () => {
                       <p className="font-bold">{r.name} {r.is_exclusive && <span className="text-yellow-400">(Эксклюзив)</span>}</p>
                       <p className="text-sm text-slate-400">Уровень {r.level_required} • {r.reward_type}: {r.value}</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteReward(r.reward_id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditReward(r)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteReward(r.reward_id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1641,8 +1737,11 @@ export const Admin = () => {
 
           {/* Wheel Tab */}
           <TabsContent value="wheel" className="space-y-6">
-            <div className="admin-card">
-              <h3 className="font-bold mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> {t('admin.addPrize')}</h3>
+            <div className="admin-card" data-testid="prize-form">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingPrize ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingPrize ? 'Редактировать приз' : t('admin.addPrize')}
+              </h3>
               <form onSubmit={handleCreatePrize} className="grid md:grid-cols-5 gap-4">
                 <div>
                   <Label>Название</Label>
@@ -1671,8 +1770,11 @@ export const Admin = () => {
                   <Label>Цвет</Label>
                   <Input type="color" value={newPrize.color} onChange={(e) => setNewPrize({...newPrize, color: e.target.value})} className="admin-input h-10" />
                 </div>
-                <div className="md:col-span-5 flex justify-end">
-                  <Button type="submit">{t('admin.create')}</Button>
+                <div className="md:col-span-5 flex justify-end gap-2">
+                  {editingPrize && (
+                    <Button type="button" variant="outline" onClick={handleCancelEditPrize}>Отмена</Button>
+                  )}
+                  <Button type="submit">{editingPrize ? 'Сохранить' : t('admin.create')}</Button>
                 </div>
               </form>
             </div>
@@ -1689,9 +1791,14 @@ export const Admin = () => {
                         <p className="text-sm text-slate-400">{p.prize_type}: {p.value} • {(p.probability * 100).toFixed(0)}%</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeletePrize(p.prize_id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditPrize(p)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeletePrize(p.prize_id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1801,8 +1908,11 @@ export const Admin = () => {
 
           {/* Missions Tab */}
           <TabsContent value="missions" className="space-y-6">
-            <div className="admin-card">
-              <h3 className="font-bold mb-4 flex items-center gap-2"><Plus className="w-4 h-4" /> Создать миссию</h3>
+            <div className="admin-card" data-testid="mission-form">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingMission ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingMission ? 'Редактировать миссию' : 'Создать миссию'}
+              </h3>
               <form onSubmit={handleCreateMission} className="grid md:grid-cols-3 gap-4">
                 <div>
                   <Label>Название</Label>
@@ -1844,8 +1954,11 @@ export const Admin = () => {
                   <Label>Размер награды</Label>
                   <Input type="number" value={newMission.reward_value} onChange={(e) => setNewMission({...newMission, reward_value: parseFloat(e.target.value)})} className="admin-input" required />
                 </div>
-                <div className="md:col-span-3 flex justify-end">
-                  <Button type="submit">Создать миссию</Button>
+                <div className="md:col-span-3 flex justify-end gap-2">
+                  {editingMission && (
+                    <Button type="button" variant="outline" onClick={handleCancelEditMission}>Отмена</Button>
+                  )}
+                  <Button type="submit">{editingMission ? 'Сохранить' : 'Создать миссию'}</Button>
                 </div>
               </form>
             </div>
@@ -1873,6 +1986,9 @@ export const Admin = () => {
                       <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleToggleMission(mission.mission_id)}>
                           {mission.is_active ? 'Деактив.' : 'Актив.'}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditMission(mission)}>
+                          <Edit className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteMission(mission.mission_id)}>
                           <Trash2 className="w-4 h-4" />
