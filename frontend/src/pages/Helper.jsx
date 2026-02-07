@@ -53,7 +53,7 @@ export const Helper = () => {
   });
   const [newReward, setNewReward] = useState({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
   const [newPrize, setNewPrize] = useState({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
-  const [newMission, setNewMission] = useState({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+  const [newMission, setNewMission] = useState({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100, min_level: 1 });
 
   const isHelper = user?.role === 'helper' || user?.role === 'admin';
 
@@ -332,13 +332,14 @@ export const Helper = () => {
       mission_type: m.mission_type,
       target_value: m.target_value,
       reward_type: m.reward_type,
-      reward_value: m.reward_value
+      reward_value: m.reward_value,
+      min_level: m.min_level || 1
     });
   };
 
   const handleCancelEditMission = () => {
     setEditingMission(null);
-    setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+    setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100, min_level: 1 });
   };
 
   const handleCreateMission = async (e) => {
@@ -356,7 +357,7 @@ export const Helper = () => {
         await adminAPI.createMission(newMission);
         toast.success('Миссия создана!');
       }
-      setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+      setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100, min_level: 1 });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка сохранения миссии');
@@ -929,6 +930,10 @@ export const Helper = () => {
                   <Label>Размер награды</Label>
                   <Input type="number" value={newMission.reward_value} onChange={(e) => setNewMission({...newMission, reward_value: parseFloat(e.target.value)})} className="admin-input" required />
                 </div>
+                <div>
+                  <Label>Мин. уровень</Label>
+                  <Input type="number" value={newMission.min_level} onChange={(e) => setNewMission({...newMission, min_level: parseInt(e.target.value)})} className="admin-input" required min="1" />
+                </div>
                 <div className="md:col-span-3 flex justify-end gap-2">
                   {editingMission && (
                     <Button type="button" variant="outline" onClick={handleCancelEditMission}>Отмена</Button>
@@ -954,7 +959,7 @@ export const Helper = () => {
                         <div>
                           <p className="font-bold">{mission.title}</p>
                           <p className="text-sm text-slate-400">
-                            {mission.description} • Цель: {mission.target_value} • Награда: {mission.reward_value} {mission.reward_type}
+                            {mission.description} • Цель: {mission.target_value} • Награда: {mission.reward_value} {mission.reward_type} • Ур: {mission.min_level || 1}+
                           </p>
                         </div>
                       </div>
