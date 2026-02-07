@@ -2014,7 +2014,7 @@ async def approve_order_return(order_id: str, user: User = Depends(require_admin
     if order.get("status") != "return_pending":
         raise HTTPException(status_code=400, detail="Заказ не находится в статусе ожидания возврата")
     
-    # Calculate refund (90%)
+    # Calculate refund (90% of actual paid amount)
     total_spent = order.get("total", 0)
     refund_amount = round(total_spent * 0.9, 2)
     order_user_id = order.get("user_id")
