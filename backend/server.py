@@ -279,7 +279,7 @@ class User(BaseModel):
     xp: int = 0
     level: int = 1
     is_admin: bool = False
-    role: str = "user"  # "user", "helper", "admin"
+    role: str = "user"  # "user", "helper", "admin", "delivery"
     wheel_spins_available: int = 0
     claimed_rewards: List[int] = []
     created_at: datetime
@@ -418,6 +418,7 @@ class Order(BaseModel):
     tracking_number: Optional[str] = None  # Tracking number for shipment
     status_history: List[dict] = []  # History of status changes
     admin_note: Optional[str] = None
+    delivery_user_id: Optional[str] = None  # ID of the delivery person who took the order
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
 
@@ -731,6 +732,13 @@ async def require_helper_or_admin(request: Request) -> User:
     user = await require_user(request)
     if user.role not in ["helper", "admin"] and not user.is_admin:
         raise HTTPException(status_code=403, detail="Helper or admin access required")
+    return user
+
+async def require_delivery_or_admin(request: Request) -> User:
+    """Require delivery or admin role"""
+    user = await require_user(request)
+    if user.role not in ["delivery", "admin"] and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Delivery or admin access required")
     return user
 
 # ==================== AUTH ENDPOINTS ====================
@@ -2111,13 +2119,70 @@ async def upload_image(request: Request, user: User = Depends(require_helper_or_
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# ==================== DELIVERY ROLE API ====================
+
+@api_router.get("/delivery/orders")
+async def get_available_delivery_orders(user: User = Depends(require_delivery_or_admin)):
+    """Get orders that are not yet taken by any delivery person"""
+    # Orders that are 'confirmed' or 'processing' and have no delivery_user_id
+    query = {
+        "status": {"$in": ["confirmed", "processing"]},
+        "delivery_user_id": None
+    }
+    # If the user is a delivery person, also show orders they have already taken
+    if user.role == "delivery":
+        query = {
+            "$or": [
+                query,
+                {"delivery_user_id": user.user_id}
+            ]
+        }
+    
+    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return orders
+
+@api_router.post("/delivery/orders/{order_id}/take")
+async def take_delivery_order(order_id: str, user: User = Depends(require_delivery_or_admin)):
+    """Take an order for delivery"""
+    if user.role != "delivery" and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Only delivery staff can take orders")
+    
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    if order.get("delivery_user_id") and order.get("delivery_user_id") != user.user_id:
+        raise HTTPException(status_code=400, detail="Заказ уже принят другим доставщиком")
+    
+    now = datetime.now(timezone.utc)
+    status_entry = {
+        "status": "processing",
+        "timestamp": now.isoformat(),
+        "note": f"Заказ принят доставщиком: {user.name}",
+        "updated_by": user.email
+    }
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "delivery_user_id": user.user_id,
+                "status": "processing",
+                "updated_at": now.isoformat()
+            },
+            "$push": {"status_history": status_entry}
+        }
+    )
+    
+    return {"message": "Заказ принят в доставку", "status": "processing"}
+
 # ==================== HELPER ROLE API ====================
 
 @api_router.put("/admin/users/{user_id}/role")
 async def update_user_role(user_id: str, role: str, user: User = Depends(require_admin)):
     """Admin can set user role: user, helper, admin"""
-    if role not in ["user", "helper", "admin"]:
-        raise HTTPException(status_code=400, detail="Неверная роль. Доступны: user, helper, admin")
+    if role not in ["user", "helper", "admin", "delivery"]:
+        raise HTTPException(status_code=400, detail="Неверная роль. Доступны: user, helper, admin, delivery")
     
     target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     if not target_user:
@@ -2126,7 +2191,7 @@ async def update_user_role(user_id: str, role: str, user: User = Depends(require
     update_data = {"role": role}
     if role == "admin":
         update_data["is_admin"] = True
-    elif role in ["user", "helper"]:
+    elif role in ["user", "helper", "delivery"]:
         update_data["is_admin"] = False
     
     await db.users.update_one({"user_id": user_id}, {"$set": update_data})
