@@ -735,16 +735,7 @@ export const Admin = () => {
     }
   };
 
-  // User role handler
-  const handleUpdateUserRole = async (userId, role) => {
-    try {
-      await adminAPI.updateUserRole(userId, role);
-      toast.success(`Роль изменена на ${role}`);
-      fetchAllData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Ошибка изменения роли');
-    }
-  };
+
 
   // Image upload handler
   const handleImageUpload = (e) => {
