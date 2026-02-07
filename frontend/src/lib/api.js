@@ -104,8 +104,10 @@ export const adminAPI = {
   approveTopupRequest: (id) => api.put(`/admin/topup-requests/${id}/approve`),
   rejectTopupRequest: (id, note) => api.put(`/admin/topup-requests/${id}/reject`, null, { params: { note } }),
   createReward: (data) => api.post('/admin/rewards', data),
+  updateReward: (id, data) => api.put(`/admin/rewards/${id}`, data),
   deleteReward: (id) => api.delete(`/admin/rewards/${id}`),
   createWheelPrize: (data) => api.post('/admin/wheel-prizes', data),
+  updateWheelPrize: (id, data) => api.put(`/admin/wheel-prizes/${id}`, data),
   deleteWheelPrize: (id) => api.delete(`/admin/wheel-prizes/${id}`),
   getOrders: () => api.get('/admin/orders'),
   getOrderDetails: (orderId) => api.get(`/admin/orders/${orderId}`),
@@ -125,6 +127,7 @@ export const adminAPI = {
   // Missions
   getMissions: () => api.get('/admin/missions'),
   createMission: (data) => api.post('/admin/missions', data),
+  updateMission: (id, data) => api.put(`/admin/missions/${id}`, data),
   deleteMission: (id) => api.delete(`/admin/missions/${id}`),
   toggleMission: (id) => api.put(`/admin/missions/${id}/toggle`),
   // Support
