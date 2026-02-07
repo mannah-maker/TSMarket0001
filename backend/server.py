@@ -562,7 +562,7 @@ class Mission(BaseModel):
     mission_id: str = Field(default_factory=lambda: f"mission_{uuid.uuid4().hex[:12]}")
     title: str
     description: str
-    mission_type: str  # "purchase", "topup", "level", "orders_count", "spend_amount"
+    mission_type: str  # "purchase", "topup", "level", "orders_count", "spend_amount", "review"
     target_value: float  # e.g., 5 orders, 1000 coins spent, level 5
     reward_type: str  # "coins", "xp", "spin"
     reward_value: float
@@ -909,6 +909,10 @@ async def create_review(review_data: ReviewCreate, user: User = Depends(get_curr
     )
 
     await db.reviews.insert_one(review.model_dump(by_alias=True))
+    
+    # Update mission progress
+    await update_mission_progress(user.user_id, "review", 1)
+    
     return review
 
 @api_router.get("/reviews/{product_id}", response_model=List[Review])
