@@ -352,13 +352,23 @@ export const Admin = () => {
   };
 
   // User management handlers
-  const handleToggleAdmin = async (userId, currentStatus) => {
+  const handleUpdateUserRole = async (userId, newRole) => {
     try {
-      await adminAPI.toggleAdmin(userId, !currentStatus);
-      toast.success('Admin status updated');
+      await adminAPI.updateUserRole(userId, newRole);
+      toast.success('Роль пользователя обновлена');
       fetchAllData();
     } catch (error) {
-      toast.error('Failed to update admin status');
+      toast.error('Ошибка обновления роли');
+    }
+  };
+
+  const handleToggleAdmin = async (userId, currentIsAdmin) => {
+    try {
+      await adminAPI.toggleAdmin(userId, !currentIsAdmin);
+      toast.success('User status updated');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Failed to update user');
     }
   };
 
@@ -1386,14 +1396,21 @@ export const Admin = () => {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant={u.is_admin ? "destructive" : "outline"} 
-                        size="sm"
-                        onClick={() => handleToggleAdmin(u.user_id, u.is_admin)}
+                      <Select 
+                        value={u.role || (u.is_admin ? 'admin' : 'user')} 
+                        onValueChange={(newRole) => handleUpdateUserRole(u.user_id, newRole)}
                         disabled={u.user_id === user?.user_id}
                       >
-                        {u.is_admin ? t('admin.removeAdmin') : t('admin.makeAdmin')}
-                      </Button>
+                        <SelectTrigger className="w-[130px] h-8">
+                          <SelectValue placeholder="Роль" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Пользователь</SelectItem>
+                          <SelectItem value="helper">Хелпер</SelectItem>
+                          <SelectItem value="delivery">Доставщик</SelectItem>
+                          <SelectItem value="admin">Админ</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button 
                         variant="destructive" 
                         size="sm"
