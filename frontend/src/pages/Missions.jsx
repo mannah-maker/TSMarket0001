@@ -6,7 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { missionsAPI } from '../lib/api';
 import { 
   Target, Trophy, Gift, Coins, Zap, RotateCw,
-  CheckCircle, Clock, Loader2, ShoppingCart, TrendingUp
+  CheckCircle, Clock, Loader2, ShoppingCart, TrendingUp, MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,6 +60,7 @@ export const Missions = () => {
       case 'spend_amount': return <Coins className="w-6 h-6" />;
       case 'level': return <TrendingUp className="w-6 h-6" />;
       case 'topup': return <Coins className="w-6 h-6" />;
+      case 'review': return <MessageSquare className="w-6 h-6" />;
       default: return <Target className="w-6 h-6" />;
     }
   };
