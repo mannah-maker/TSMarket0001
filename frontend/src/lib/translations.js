@@ -60,6 +60,13 @@ export const translations = {
       earnXP: 'XP гиред',
       withPurchase: 'бо ин харид',
       totalXP: 'Ҳамагӣ XP',
+      reviews: 'Шарҳҳо',
+      noReviews: 'Ҳанӯз шарҳ нест. Аввалин бошед!',
+      addReview: 'Шарҳ илова кунед',
+      rating: 'Рейтинг',
+      comment: 'Шарҳ',
+      submit: 'Фиристодан',
+      pleaseLogin: 'Лутфан барои гузоштани шарҳ ворид шавед',
     },
     // Cart
     cart: {
@@ -307,6 +314,13 @@ export const translations = {
       earnXP: 'Заработай XP',
       withPurchase: 'с этой покупкой',
       totalXP: 'Всего XP',
+      reviews: 'Отзывы',
+      noReviews: 'Отзывов пока нет. Будьте первым!',
+      addReview: 'Добавить отзыв',
+      rating: 'Рейтинг',
+      comment: 'Комментарий',
+      submit: 'Отправить',
+      pleaseLogin: 'Пожалуйста, войдите, чтобы оставить отзыв',
     },
     // Cart
     cart: {
