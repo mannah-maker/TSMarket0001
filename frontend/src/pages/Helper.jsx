@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { adminAPI, productsAPI, categoriesAPI } from '../lib/api';
 import { 
-  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle, Edit2
+  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle, Edit2, Gift, Sparkles, Target, Edit
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,6 +30,9 @@ export const Helper = () => {
   const [categories, setCategories] = useState([]);
   const [topupRequests, setTopupRequests] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [rewards, setRewards] = useState([]);
+  const [wheelPrizes, setWheelPrizes] = useState([]);
+  const [missions, setMissions] = useState([]);
   const [productImages, setProductImages] = useState([]);
   const [imageUrls, setImageUrls] = useState(['']);
   const [viewingImage, setViewingImage] = useState(null);
@@ -37,6 +40,9 @@ export const Helper = () => {
   // Edit state
   const [editingProduct, setEditingProduct] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState(null);
+  const [editingPrize, setEditingPrize] = useState(null);
+  const [editingMission, setEditingMission] = useState(null);
 
   // Form states
   const [newProduct, setNewProduct] = useState({ 
@@ -45,6 +51,9 @@ export const Helper = () => {
     price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100,
     in_stock: true, arrival_date: ''
   });
+  const [newReward, setNewReward] = useState({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
+  const [newPrize, setNewPrize] = useState({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
+  const [newMission, setNewMission] = useState({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
 
   const isHelper = user?.role === 'helper' || user?.role === 'admin';
 
@@ -61,17 +70,23 @@ export const Helper = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [productsRes, categoriesRes, requestsRes, ordersRes] = await Promise.all([
+      const [productsRes, categoriesRes, requestsRes, ordersRes, rewardsRes, prizesRes, missionsRes] = await Promise.all([
         productsAPI.getAll(),
         categoriesAPI.getAll(),
         adminAPI.getTopupRequests(),
         adminAPI.getOrders(),
+        adminAPI.getRewards ? adminAPI.getRewards() : { data: [] },
+        adminAPI.getWheelPrizes ? adminAPI.getWheelPrizes() : { data: [] },
+        adminAPI.getMissions ? adminAPI.getMissions() : { data: [] }
       ]);
       
       setProducts(productsRes.data);
       setCategories(categoriesRes.data);
       setTopupRequests(requestsRes.data);
       setOrders(ordersRes.data);
+      setRewards(rewardsRes.data || []);
+      setWheelPrizes(prizesRes.data || []);
+      setMissions(missionsRes.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Ошибка загрузки данных');
@@ -84,24 +99,18 @@ export const Helper = () => {
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
-      // Collect all valid URLs
       const validUrls = imageUrls.filter(url => url.trim().startsWith('http'));
-      
-      // Combine uploaded images and URLs
       let allImages = [...productImages, ...validUrls];
-      
       if (allImages.length === 0) {
         toast.error('Добавьте хотя бы одно изображение или URL');
         return;
       }
-
       const productData = {
         ...newProduct,
-        image_url: allImages[0], // First image is main
+        image_url: allImages[0],
         images: allImages,
         sizes: newProduct.sizes ? (Array.isArray(newProduct.sizes) ? newProduct.sizes : newProduct.sizes.split(',').map(s => s.trim())) : [],
       };
-      
       await productsAPI.create(productData);
       toast.success('Товар создан!');
       setNewProduct({ 
@@ -121,17 +130,12 @@ export const Helper = () => {
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     try {
-      // Collect all valid URLs from the form
       const validUrls = imageUrls.filter(url => url.trim().startsWith('http'));
-      
-      // Combine uploaded images and URLs
       let allImages = [...productImages, ...validUrls];
-      
       if (allImages.length === 0) {
         toast.error('Добавьте хотя бы одно изображение или URL');
         return;
       }
-
       const productData = {
         ...editingProduct,
         image_url: allImages[0],
@@ -140,7 +144,6 @@ export const Helper = () => {
           ? editingProduct.sizes.split(',').map(s => s.trim()) 
           : editingProduct.sizes,
       };
-      
       await productsAPI.update(editingProduct.product_id, productData);
       toast.success('Товар обновлен!');
       setIsEditDialogOpen(false);
@@ -171,7 +174,6 @@ export const Helper = () => {
         toast.error('Только изображения');
         continue;
       }
-      
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -225,6 +227,160 @@ export const Helper = () => {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка');
+    }
+  };
+
+  // Reward handlers
+  const handleEditReward = (r) => {
+    setEditingReward(r);
+    setNewReward({
+      level_required: r.level_required,
+      name: r.name,
+      description: r.description,
+      reward_type: r.reward_type,
+      value: r.value,
+      is_exclusive: r.is_exclusive || false
+    });
+  };
+
+  const handleCancelEditReward = () => {
+    setEditingReward(null);
+    setNewReward({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
+  };
+
+  const handleCreateReward = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingReward) {
+        await adminAPI.updateReward(editingReward.reward_id, newReward);
+        toast.success('Reward updated');
+        setEditingReward(null);
+      } else {
+        await adminAPI.createReward(newReward);
+        toast.success('Reward created');
+      }
+      setNewReward({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save reward');
+    }
+  };
+
+  const handleDeleteReward = async (id) => {
+    if (!window.confirm('Удалить эту награду?')) return;
+    try {
+      await adminAPI.deleteReward(id);
+      toast.success('Reward deleted');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete reward');
+    }
+  };
+
+  // Wheel prize handlers
+  const handleEditPrize = (p) => {
+    setEditingPrize(p);
+    setNewPrize({
+      name: p.name,
+      prize_type: p.prize_type,
+      value: p.value,
+      probability: p.probability,
+      color: p.color || '#0D9488'
+    });
+  };
+
+  const handleCancelEditPrize = () => {
+    setEditingPrize(null);
+    setNewPrize({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
+  };
+
+  const handleCreatePrize = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingPrize) {
+        await adminAPI.updateWheelPrize(editingPrize.prize_id, newPrize);
+        toast.success('Prize updated');
+        setEditingPrize(null);
+      } else {
+        await adminAPI.createWheelPrize(newPrize);
+        toast.success('Prize created');
+      }
+      setNewPrize({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save prize');
+    }
+  };
+
+  const handleDeletePrize = async (id) => {
+    if (!window.confirm('Удалить этот приз?')) return;
+    try {
+      await adminAPI.deleteWheelPrize(id);
+      toast.success('Prize deleted');
+      fetchData();
+    } catch (error) {
+      toast.error('Failed to delete prize');
+    }
+  };
+
+  // Mission handlers
+  const handleEditMission = (m) => {
+    setEditingMission(m);
+    setNewMission({
+      title: m.title,
+      description: m.description,
+      mission_type: m.mission_type,
+      target_value: m.target_value,
+      reward_type: m.reward_type,
+      reward_value: m.reward_value
+    });
+  };
+
+  const handleCancelEditMission = () => {
+    setEditingMission(null);
+    setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+  };
+
+  const handleCreateMission = async (e) => {
+    e.preventDefault();
+    if (!newMission.title.trim()) {
+      toast.error('Введите название миссии');
+      return;
+    }
+    try {
+      if (editingMission) {
+        await adminAPI.updateMission(editingMission.mission_id, newMission);
+        toast.success('Миссия обновлена!');
+        setEditingMission(null);
+      } else {
+        await adminAPI.createMission(newMission);
+        toast.success('Миссия создана!');
+      }
+      setNewMission({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100 });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка сохранения миссии');
+    }
+  };
+
+  const handleDeleteMission = async (id) => {
+    if (!window.confirm('Удалить эту миссию?')) return;
+    try {
+      await adminAPI.deleteMission(id);
+      toast.success('Миссия удалена');
+      fetchData();
+    } catch (error) {
+      toast.error('Ошибка удаления миссии');
+    }
+  };
+
+  const handleToggleMission = async (id) => {
+    try {
+      await adminAPI.toggleMission(id);
+      toast.success('Статус изменён');
+      fetchData();
+    } catch (error) {
+      toast.error('Ошибка изменения статуса');
     }
   };
 
@@ -295,9 +451,11 @@ export const Helper = () => {
           <TabsList className="admin-tabs">
             <TabsTrigger value="topup" className="admin-tab">
               <CreditCard className="w-4 h-4 mr-2" />
-              {lang === 'ru' ? 'Заявки на пополнение' : 'Дархостҳои пуркунӣ'}
+              {lang === 'ru' ? 'Пополнения' : 'Пуркунӣ'}
               {pendingRequests.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-red-500 rounded-full text-xs">{pendingRequests.length}</span>
+                <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                  {pendingRequests.length}
+                </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="products" className="admin-tab">
@@ -307,6 +465,18 @@ export const Helper = () => {
             <TabsTrigger value="orders" className="admin-tab">
               <ShoppingCart className="w-4 h-4 mr-2" />
               {lang === 'ru' ? 'Заказы' : 'Фармоишҳо'}
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="admin-tab">
+              <Gift className="w-4 h-4 mr-2" />
+              {lang === 'ru' ? 'Награды' : 'Мукофотҳо'}
+            </TabsTrigger>
+            <TabsTrigger value="wheel" className="admin-tab">
+              <Sparkles className="w-4 h-4 mr-2" />
+              {lang === 'ru' ? 'Колесо' : 'Чарх'}
+            </TabsTrigger>
+            <TabsTrigger value="missions" className="admin-tab">
+              <Target className="w-4 h-4 mr-2" />
+              {lang === 'ru' ? 'Миссии' : 'Миссияҳо'}
             </TabsTrigger>
           </TabsList>
 
@@ -389,7 +559,6 @@ export const Helper = () => {
                 {lang === 'ru' ? 'Добавить товар' : 'Илова кардани мол'}
               </h3>
               <form onSubmit={handleCreateProduct} className="space-y-4">
-                {/* Multilingual Name Fields */}
                 <div className="p-3 border border-slate-600 rounded-lg">
                   <Label className="text-sm text-slate-400 mb-2 block">
                     {lang === 'ru' ? 'Название товара' : 'Номи мол'}
@@ -405,42 +574,15 @@ export const Helper = () => {
                         required 
                       />
                     </div>
-                  <div className="space-y-2">
-                    <Label>{lang === 'ru' ? 'URL изображений' : 'URL-ҳои тасвирҳо'}</Label>
-                    {imageUrls.map((url, index) => (
-                      <div key={index} className="flex gap-2">
-                        <Input 
-                          value={url} 
-                          onChange={(e) => {
-                            const newUrls = [...imageUrls];
-                            newUrls[index] = e.target.value;
-                            setImageUrls(newUrls);
-                          }} 
-                          className="admin-input flex-1" 
-                          placeholder="https://..." 
-                        />
-                        {imageUrls.length > 1 && (
-                          <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="icon" 
-                            onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== index))}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setImageUrls([...imageUrls, ''])}
-                      className="w-full border-dashed"
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> {lang === 'ru' ? 'Добавить URL' : 'Илова кардани URL'}
-                    </Button>
-                  </div>
+                    <div>
+                      <Label className="text-xs">🇹🇯 Тоҷикӣ</Label>
+                      <Input 
+                        value={newProduct.name_tj} 
+                        onChange={(e) => setNewProduct({...newProduct, name_tj: e.target.value})} 
+                        className="admin-input" 
+                        placeholder="Ном бо тоҷикӣ" 
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -483,14 +625,10 @@ export const Helper = () => {
                   </div>
                 </div>
 
-                {/* Availability and Arrival */}
                 <div className="grid md:grid-cols-2 gap-4 p-3 border border-slate-600 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>{lang === 'ru' ? 'В наличии' : 'Дар анбор'}</Label>
-                      <p className="text-xs text-slate-400">
-                        {lang === 'ru' ? 'Показывать товар как доступный' : 'Нишон додани мол ҳамчун дастрас'}
-                      </p>
                     </div>
                     <Switch 
                       checked={newProduct.in_stock}
@@ -510,99 +648,31 @@ export const Helper = () => {
                   </div>
                 </div>
 
-                {/* Description */}
-                <div className="p-3 border border-slate-600 rounded-lg">
-                  <Label className="text-sm text-slate-400 mb-2 block">
-                    {lang === 'ru' ? 'Описание товара' : 'Тавсифи мол'}
-                  </Label>
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs">🇷🇺 Русский *</Label>
-                      <Input 
-                        value={newProduct.description_ru} 
-                        onChange={(e) => setNewProduct({...newProduct, description_ru: e.target.value, description: e.target.value})} 
-                        className="admin-input" 
-                        placeholder="Описание на русском" 
-                        required 
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">🇹🇯 Тоҷикӣ</Label>
-                      <Input 
-                        value={newProduct.description_tj} 
-                        onChange={(e) => setNewProduct({...newProduct, description_tj: e.target.value})} 
-                        className="admin-input" 
-                        placeholder="Тавсифи тоҷикӣ" 
-                      />
-                    </div>
-                  </div>
+                <div className="flex justify-end">
+                  <Button type="submit">{lang === 'ru' ? 'Создать товар' : 'Эҷод кардани мол'}</Button>
                 </div>
-
-                {/* Image Upload */}
-                <div>
-                  <Label className="mb-2 block">{lang === 'ru' ? 'Изображения' : 'Расмҳо'}</Label>
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {productImages.map((img, index) => (
-                      <div key={index} className="relative group">
-                        <img src={img} alt={`Preview ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-600" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <label className="w-20 h-20 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                      <Plus className="w-6 h-6 text-slate-400" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  {lang === 'ru' ? 'Создать товар' : 'Сохтани мол'}
-                </Button>
               </form>
             </div>
 
-            {/* Products List */}
             <div className="admin-card">
-              <h3 className="font-bold mb-4">{lang === 'ru' ? `Все товары (${products.length})` : `Ҳамаи молҳо (${products.length})`}</h3>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
+              <h3 className="font-bold mb-4">{lang === 'ru' ? 'Список товаров' : 'Рӯйхати молҳо'} ({products.length})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {products.map((product) => (
-                  <div key={product.product_id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <img src={product.image_url} alt={product.name} className="w-12 h-12 object-cover rounded" />
-                      <div>
-                        <p className="font-medium">{getLocalizedText(product, 'name')}</p>
-                        <p className="text-sm text-slate-400">
-                          {product.price} • {product.xp_reward} XP • 
-                          <span className={product.in_stock !== false ? "text-green-400 ml-1" : "text-red-400 ml-1"}>
-                            {product.in_stock !== false ? (lang === 'ru' ? 'В наличии' : 'Дар анбор') : (lang === 'ru' ? 'Нет в наличии' : 'Дар анбор нест')}
-                          </span>
-                        </p>
-                      </div>
+                  <div key={product.product_id} className="flex items-center gap-4 p-3 bg-slate-800 rounded-lg border border-slate-700">
+                    <img src={product.image_url} alt={product.name} className="w-16 h-16 object-cover rounded" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold truncate">{getLocalizedText(product, 'name')}</p>
+                      <p className="text-sm text-primary">{product.price} coins</p>
+                      <p className="text-xs text-slate-400">Stock: {product.stock}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <Button 
                         size="sm" 
-                        variant="outline"
+                        variant="ghost" 
+                        className="text-blue-400"
                         onClick={() => {
-                          setEditingProduct({...product});
-                          // Set uploaded images
-                          setProductImages(product.images?.filter(img => img.startsWith('data:')) || []);
-                          // Set URL images
-                          const urls = product.images?.filter(img => img.startsWith('http')) || [];
-                          setImageUrls(urls.length > 0 ? urls : ['']);
+                          setEditingProduct(product);
+                          setImageUrls(product.images || [product.image_url]);
                           setIsEditDialogOpen(true);
                         }}
                       >
@@ -611,7 +681,8 @@ export const Helper = () => {
                       {user?.role === 'admin' && (
                         <Button 
                           size="sm" 
-                          variant="destructive"
+                          variant="ghost" 
+                          className="text-red-500"
                           onClick={() => handleDeleteProduct(product.product_id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -644,7 +715,6 @@ export const Helper = () => {
                     completed: { color: 'bg-green-500/20 text-green-400', label: lang === 'ru' ? 'Завершён' : 'Анҷом ёфт' }
                   };
                   const config = statusConfig[order.status] || statusConfig.pending;
-                  
                   return (
                     <div key={order.order_id} className="admin-card">
                       <div className="flex items-start justify-between">
@@ -652,10 +722,6 @@ export const Helper = () => {
                           <p className="font-bold">#{order.order_id.slice(-8).toUpperCase()}</p>
                           <p className="text-sm text-slate-400">{order.user_email}</p>
                           <p className="text-sm text-slate-400">📍 {order.delivery_address}</p>
-                          <p className="text-sm text-slate-400">📞 {order.phone_number}</p>
-                          {order.tracking_number && (
-                            <p className="text-sm text-slate-400">📦 Трек: <span className="font-mono">{order.tracking_number}</span></p>
-                          )}
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-primary text-xl">{order.total}</p>
@@ -664,24 +730,12 @@ export const Helper = () => {
                           </span>
                         </div>
                       </div>
-                      
-                      <div className="mt-3 pt-3 border-t border-slate-700">
-                        {order.items?.map((item, i) => (
-                          <p key={i} className="text-sm text-slate-300">
-                            {item.product_name || item.name} x{item.quantity} — {item.price * item.quantity}
-                          </p>
-                        ))}
-                      </div>
-                      
-                      {/* Status change buttons */}
                       <div className="mt-3 pt-3 border-t border-slate-700 flex flex-wrap gap-2">
-                        <p className="w-full text-xs text-slate-500 mb-1">{lang === 'ru' ? 'Изменить статус:' : 'Иваз кардани вазъият:'}</p>
                         {['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
                           <Button
                             key={status}
                             size="sm"
                             variant={order.status === status ? 'default' : 'outline'}
-                            className={`text-xs ${order.status === status ? '' : 'opacity-60 hover:opacity-100'}`}
                             onClick={() => handleUpdateOrderStatus(order.order_id, status)}
                             disabled={order.status === status}
                           >
@@ -694,6 +748,232 @@ export const Helper = () => {
                 })}
               </div>
             )}
+          </TabsContent>
+
+          {/* Rewards Tab */}
+          <TabsContent value="rewards" className="space-y-6">
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingReward ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingReward ? 'Редактировать награду' : 'Добавить награду'}
+              </h3>
+              <form onSubmit={handleCreateReward} className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Требуемый уровень</Label>
+                  <Input type="number" value={newReward.level_required} onChange={(e) => setNewReward({...newReward, level_required: parseInt(e.target.value)})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Название</Label>
+                  <Input value={newReward.name} onChange={(e) => setNewReward({...newReward, name: e.target.value})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Описание</Label>
+                  <Input value={newReward.description} onChange={(e) => setNewReward({...newReward, description: e.target.value})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Тип</Label>
+                  <select value={newReward.reward_type} onChange={(e) => setNewReward({...newReward, reward_type: e.target.value})} className="admin-input w-full h-9">
+                    <option value="coins">Монеты</option>
+                    <option value="xp_boost">XP буст</option>
+                    <option value="discount">Скидка</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Значение</Label>
+                  <Input type="number" value={newReward.value} onChange={(e) => setNewReward({...newReward, value: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div className="flex items-end gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={newReward.is_exclusive} onChange={(e) => setNewReward({...newReward, is_exclusive: e.target.checked})} />
+                    Эксклюзив
+                  </label>
+                  <div className="flex gap-2">
+                    <Button type="submit">{editingReward ? 'Сохранить' : 'Создать'}</Button>
+                    {editingReward && (
+                      <Button type="button" variant="outline" onClick={handleCancelEditReward}>Отмена</Button>
+                    )}
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="admin-card">
+              <h3 className="font-bold mb-4">Награды ({rewards.length})</h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {rewards.map((r) => (
+                  <div key={r.reward_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                    <div>
+                      <p className="font-bold">{r.name} {r.is_exclusive && <span className="text-yellow-400">(Эксклюзив)</span>}</p>
+                      <p className="text-sm text-slate-400">Уровень {r.level_required} • {r.reward_type}: {r.value}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditReward(r)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteReward(r.reward_id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Wheel Tab */}
+          <TabsContent value="wheel" className="space-y-6">
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingPrize ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingPrize ? 'Редактировать приз' : 'Добавить приз'}
+              </h3>
+              <form onSubmit={handleCreatePrize} className="grid md:grid-cols-5 gap-4">
+                <div>
+                  <Label>Название</Label>
+                  <Input value={newPrize.name} onChange={(e) => setNewPrize({...newPrize, name: e.target.value})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Тип</Label>
+                  <select value={newPrize.prize_type} onChange={(e) => setNewPrize({...newPrize, prize_type: e.target.value})} className="admin-input w-full h-9">
+                    <option value="coins">Монеты</option>
+                    <option value="xp">XP</option>
+                    <option value="discount">Скидка</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Значение</Label>
+                  <Input type="number" value={newPrize.value} onChange={(e) => setNewPrize({...newPrize, value: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Вероятность (0-1)</Label>
+                  <Input type="number" step="0.01" value={newPrize.probability} onChange={(e) => setNewPrize({...newPrize, probability: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Цвет</Label>
+                  <Input type="color" value={newPrize.color} onChange={(e) => setNewPrize({...newPrize, color: e.target.value})} className="admin-input h-10" />
+                </div>
+                <div className="md:col-span-5 flex justify-end gap-2">
+                  {editingPrize && (
+                    <Button type="button" variant="outline" onClick={handleCancelEditPrize}>Отмена</Button>
+                  )}
+                  <Button type="submit">{editingPrize ? 'Сохранить' : 'Создать'}</Button>
+                </div>
+              </form>
+            </div>
+
+            <div className="admin-card">
+              <h3 className="font-bold mb-4">Призы колеса ({wheelPrizes.length})</h3>
+              <div className="space-y-2">
+                {wheelPrizes.map((p) => (
+                  <div key={p.prize_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded" style={{ backgroundColor: p.color }} />
+                      <div>
+                        <p className="font-bold">{p.name}</p>
+                        <p className="text-sm text-slate-400">{p.prize_type}: {p.value} • {(p.probability * 100).toFixed(0)}%</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditPrize(p)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeletePrize(p.prize_id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Missions Tab */}
+          <TabsContent value="missions" className="space-y-6">
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                {editingMission ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                {editingMission ? 'Редактировать миссию' : 'Создать миссию'}
+              </h3>
+              <form onSubmit={handleCreateMission} className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Название</Label>
+                  <Input value={newMission.title} onChange={(e) => setNewMission({...newMission, title: e.target.value})} className="admin-input" placeholder="Первые покупки" required />
+                </div>
+                <div>
+                  <Label>Описание</Label>
+                  <Input value={newMission.description} onChange={(e) => setNewMission({...newMission, description: e.target.value})} className="admin-input" placeholder="Сделай 5 покупок" required />
+                </div>
+                <div>
+                  <Label>Тип миссии</Label>
+                  <select value={newMission.mission_type} onChange={(e) => setNewMission({...newMission, mission_type: e.target.value})} className="admin-input w-full h-9">
+                    <option value="orders_count">Кол-во заказов</option>
+                    <option value="spend_amount">Потратить монеты</option>
+                    <option value="purchase">Покупки</option>
+                    <option value="topup">Пополнения</option>
+                    <option value="level">Достичь уровня</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Цель (число)</Label>
+                  <Input type="number" value={newMission.target_value} onChange={(e) => setNewMission({...newMission, target_value: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div>
+                  <Label>Тип награды</Label>
+                  <select value={newMission.reward_type} onChange={(e) => setNewMission({...newMission, reward_type: e.target.value})} className="admin-input w-full h-9">
+                    <option value="coins">Монеты</option>
+                    <option value="xp">XP</option>
+                    <option value="spin">Вращения колеса</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Размер награды</Label>
+                  <Input type="number" value={newMission.reward_value} onChange={(e) => setNewMission({...newMission, reward_value: parseFloat(e.target.value)})} className="admin-input" required />
+                </div>
+                <div className="md:col-span-3 flex justify-end gap-2">
+                  {editingMission && (
+                    <Button type="button" variant="outline" onClick={handleCancelEditMission}>Отмена</Button>
+                  )}
+                  <Button type="submit">{editingMission ? 'Сохранить' : 'Создать миссию'}</Button>
+                </div>
+              </form>
+            </div>
+
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Миссии ({missions.length})
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {missions.length === 0 ? (
+                  <p className="text-slate-400 text-center py-4">Миссий пока нет</p>
+                ) : (
+                  missions.map((mission) => (
+                    <div key={mission.mission_id} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-3 h-3 rounded-full ${mission.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <div>
+                          <p className="font-bold">{mission.title}</p>
+                          <p className="text-sm text-slate-400">
+                            {mission.description} • Цель: {mission.target_value} • Награда: {mission.reward_value} {mission.reward_type}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleToggleMission(mission.mission_id)}>
+                          {mission.is_active ? 'Деактив.' : 'Актив.'}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-blue-400" onClick={() => handleEditMission(mission)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteMission(mission.mission_id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -723,143 +1003,10 @@ export const Helper = () => {
                     />
                   </div>
                 </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>{lang === 'ru' ? 'Цена' : 'Нарх'}</Label>
-                    <Input 
-                      type="number" 
-                      value={editingProduct.price} 
-                      onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value)})} 
-                      className="admin-input" 
-                    />
-                  </div>
-                  <div>
-                    <Label>XP</Label>
-                    <Input 
-                      type="number" 
-                      value={editingProduct.xp_reward} 
-                      onChange={(e) => setEditingProduct({...editingProduct, xp_reward: parseInt(e.target.value)})} 
-                      className="admin-input" 
-                    />
-                  </div>
-                  <div>
-                    <Label>{lang === 'ru' ? 'Сток' : 'Миқдор'}</Label>
-                    <Input 
-                      type="number" 
-                      value={editingProduct.stock} 
-                      onChange={(e) => setEditingProduct({...editingProduct, stock: parseInt(e.target.value)})} 
-                      className="admin-input" 
-                    />
-                  </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Отмена</Button>
+                  <Button type="submit">Сохранить</Button>
                 </div>
-
-                <div className="grid md:grid-cols-2 gap-4 p-3 border border-slate-700 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>{lang === 'ru' ? 'В наличии' : 'Дар анбор'}</Label>
-                    </div>
-                    <Switch 
-                      checked={editingProduct.in_stock !== false}
-                      onCheckedChange={(checked) => setEditingProduct({...editingProduct, in_stock: checked})}
-                    />
-                  </div>
-                  <div>
-                    <Label>{lang === 'ru' ? 'Дата прибытия' : 'Санаи омадан'}</Label>
-                    <Input 
-                      type="text" 
-                      value={editingProduct.arrival_date || ''} 
-                      onChange={(e) => setEditingProduct({...editingProduct, arrival_date: e.target.value})} 
-                      className="admin-input" 
-                      placeholder="Напр: 15 февраля"
-                      disabled={editingProduct.in_stock !== false}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>{lang === 'ru' ? 'Размеры (через запятую)' : 'Андозаҳо (бо вергул)'}</Label>
-                  <Input 
-                    value={Array.isArray(editingProduct.sizes) ? editingProduct.sizes.join(', ') : editingProduct.sizes || ''} 
-                    onChange={(e) => setEditingProduct({...editingProduct, sizes: e.target.value})} 
-                    className="admin-input" 
-                    placeholder="S, M, L, XL"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{lang === 'ru' ? 'URL изображений' : 'URL-ҳои тасвирҳо'}</Label>
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input 
-                        value={url} 
-                        onChange={(e) => {
-                          const newUrls = [...imageUrls];
-                          newUrls[index] = e.target.value;
-                          setImageUrls(newUrls);
-                        }} 
-                        className="admin-input flex-1" 
-                        placeholder="https://..." 
-                      />
-                      {imageUrls.length > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="destructive" 
-                          size="icon" 
-                          onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== index))}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setImageUrls([...imageUrls, ''])}
-                    className="w-full border-dashed"
-                  >
-                    <Plus className="w-4 h-4 mr-2" /> {lang === 'ru' ? 'Добавить URL' : 'Илова кардани URL'}
-                  </Button>
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">{lang === 'ru' ? 'Загрузить изображения' : 'Боргузории тасвирҳо'}</Label>
-                  <div className="flex flex-wrap gap-3 mb-3">
-                    {productImages.map((img, index) => (
-                      <div key={index} className="relative group">
-                        <img src={img} alt={`Preview ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border border-slate-700" />
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                    <label className="w-20 h-20 border-2 border-dashed border-slate-700 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-                      <Plus className="w-6 h-6 text-slate-400" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                    {lang === 'ru' ? 'Отмена' : 'Бекор кардан'}
-                  </Button>
-                  <Button type="submit">
-                    {lang === 'ru' ? 'Сохранить' : 'Захира кардан'}
-                  </Button>
-                </DialogFooter>
               </form>
             )}
           </DialogContent>
@@ -872,15 +1019,8 @@ export const Helper = () => {
             onClick={() => setViewingImage(null)}
           >
             <div className="relative max-w-3xl max-h-[80vh]">
-              <img 
-                src={viewingImage} 
-                alt="Receipt" 
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              />
-              <button
-                onClick={() => setViewingImage(null)}
-                className="absolute -top-4 -right-4 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center"
-              >
+              <img src={viewingImage} alt="Receipt" className="max-w-full max-h-[80vh] object-contain rounded-lg" />
+              <button onClick={() => setViewingImage(null)} className="absolute -top-4 -right-4 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center">
                 <X className="w-6 h-6" />
               </button>
             </div>
