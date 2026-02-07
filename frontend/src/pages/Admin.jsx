@@ -1825,6 +1825,7 @@ export const Admin = () => {
                           <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                             o.status === 'delivered' ? 'bg-green-500/20 text-green-500' :
                             o.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                            o.status === 'returned' ? 'bg-gray-500/20 text-gray-500' :
                             o.status === 'shipped' ? 'bg-orange-500/20 text-orange-500' :
                             o.status === 'confirmed' ? 'bg-blue-500/20 text-blue-500' :
                             'bg-yellow-500/20 text-yellow-500'
