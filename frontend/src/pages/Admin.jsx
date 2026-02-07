@@ -73,6 +73,8 @@ export const Admin = () => {
 
   // Image modal for viewing receipts
   const [viewingImage, setViewingImage] = useState(null);
+  const [isEditingRevenue, setIsEditingRevenue] = useState(false);
+  const [newRevenueValue, setNewRevenueValue] = useState('');
 
   useEffect(() => {
     // Wait for auth to finish loading before checking permissions
@@ -288,6 +290,17 @@ export const Admin = () => {
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
+    }
+  };
+
+  const handleApproveReturn = async (orderId) => {
+    if (!window.confirm('Одобрить возврат? 90% стоимости будет автоматически возвращено на баланс пользователя.')) return;
+    try {
+      await adminAPI.approveReturn(orderId);
+      toast.success('Возврат одобрен, средства возвращены');
+      fetchAllData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка при одобрении возврата');
     }
   };
 
@@ -795,10 +808,73 @@ export const Admin = () => {
               <p className="text-2xl font-black">{stats.orders_count}</p>
               <p className="text-sm text-slate-400">{t('admin.totalOrders')}</p>
             </div>
-            <div className="admin-card">
+            <div className="admin-card group relative">
               <BarChart3 className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-black">{stats.total_revenue?.toFixed(0)}</p>
-              <p className="text-sm text-slate-400">{t('admin.totalRevenue')}</p>
+              {isEditingRevenue ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <Input 
+                    type="number" 
+                    value={newRevenueValue} 
+                    onChange={(e) => setNewRevenueValue(e.target.value)}
+                    className="admin-input h-8 w-24 text-sm"
+                    autoFocus
+                  />
+                  <Button size="icon" className="h-7 w-7 bg-green-600" onClick={async () => {
+                    try {
+                      await adminAPI.updateRevenue(parseFloat(newRevenueValue));
+                      toast.success('Выручка обновлена');
+                      setIsEditingRevenue(false);
+                      fetchAllData();
+                    } catch (e) {
+                      toast.error('Ошибка обновления');
+                    }
+                  }}>
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setIsEditingRevenue(false)}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-black">
+                    {stats.total_revenue?.toFixed(0)}
+                    {stats.is_custom_revenue && <span className="text-xs text-yellow-500 ml-1" title="Установлено вручную">*</span>}
+                  </p>
+                  {isAdmin && (
+                    <button 
+                      onClick={() => {
+                        setNewRevenueValue(stats.total_revenue?.toString());
+                        setIsEditingRevenue(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-700 rounded"
+                    >
+                      <Edit className="w-3 h-3 text-slate-400" />
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-400">{t('admin.totalRevenue')}</p>
+                {stats.is_custom_revenue && isAdmin && !isEditingRevenue && (
+                  <button 
+                    onClick={async () => {
+                      if (window.confirm('Сбросить выручку к реальным значениям?')) {
+                        try {
+                          await adminAPI.resetRevenue();
+                          toast.success('Выручка сброшена');
+                          fetchAllData();
+                        } catch (e) {
+                          toast.error('Ошибка сброса');
+                        }
+                      }
+                    }}
+                    className="text-[10px] text-yellow-500 hover:underline"
+                  >
+                    Сброс
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1826,11 +1902,12 @@ export const Admin = () => {
                             o.status === 'delivered' ? 'bg-green-500/20 text-green-500' :
                             o.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
                             o.status === 'returned' ? 'bg-gray-500/20 text-gray-500' :
+                            o.status === 'return_pending' ? 'bg-purple-500/20 text-purple-400' :
                             o.status === 'shipped' ? 'bg-orange-500/20 text-orange-500' :
                             o.status === 'confirmed' ? 'bg-blue-500/20 text-blue-500' :
                             'bg-yellow-500/20 text-yellow-500'
                           }`}>
-                            {o.status.toUpperCase()}
+                            {o.status === 'return_pending' ? 'ОЖИДАЕТ ВОЗВРАТА' : o.status.toUpperCase()}
                           </span>
                         </div>
                       </div>
@@ -1900,6 +1977,15 @@ export const Admin = () => {
                         >
                           <XCircle className="w-3 h-3 mr-1" /> Отменить
                         </Button>
+                        {o.status === 'return_pending' && (
+                          <Button 
+                            size="sm" 
+                            className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                            onClick={() => handleApproveReturn(o.order_id)}
+                          >
+                            <Check className="w-3 h-3 mr-1" /> Одобрить возврат (90%)
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))
