@@ -170,6 +170,17 @@ export const Navbar = () => {
                         </DropdownMenuItem>
                       </>
                     )}
+                    {user?.role === 'delivery' && !isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link to="/delivery" className="flex items-center gap-2 cursor-pointer text-green-400" data-testid="delivery-link">
+                            <Truck className="w-4 h-4" />
+                            {lang === 'ru' ? 'Панель доставщика' : 'Панели расонанда'}
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 cursor-pointer text-destructive" data-testid="logout-btn">
                       <LogOut className="w-4 h-4" />
