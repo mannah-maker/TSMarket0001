@@ -393,6 +393,17 @@ export const Admin = () => {
     }
   };
 
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Вы уверены, что хотите удалить этот заказ?')) return;
+    try {
+      await adminAPI.deleteOrder(orderId);
+      toast.success('Заказ удален');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка при удалении заказа');
+    }
+  };
+
   const handleEditUser = (u) => {
     setEditingUser(u);
     setEditBalance(u.balance?.toString() || '0');
@@ -1984,6 +1995,14 @@ export const Admin = () => {
                           onClick={() => handleUpdateOrderStatus(o.order_id, 'cancelled')}
                         >
                           <XCircle className="w-3 h-3 mr-1" /> Отменить
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          className="h-8 text-xs"
+                          onClick={() => handleDeleteOrder(o.order_id)}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Удалить
                         </Button>
                         {o.status === 'return_pending' && (
                           <Button 
