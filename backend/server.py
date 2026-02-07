@@ -1485,16 +1485,43 @@ async def get_admin_stats(user: User = Depends(require_helper_or_admin)):
     orders_count = await db.orders.count_documents({})
     products_count = await db.products.count_documents({})
     
-    # Total revenue
-    orders = await db.orders.find({}, {"total": 1, "_id": 0}).to_list(10000)
-    total_revenue = sum(o.get("total", 0) for o in orders)
+    # Get custom revenue from settings if exists
+    settings = await db.admin_settings.find_one({"settings_id": "admin_settings"})
+    custom_revenue = settings.get("custom_revenue") if settings else None
+    
+    if custom_revenue is not None:
+        total_revenue = custom_revenue
+    else:
+        # Calculate real revenue from orders
+        orders = await db.orders.find({}, {"total": 1, "_id": 0}).to_list(10000)
+        total_revenue = sum(o.get("total", 0) for o in orders)
     
     return {
         "users_count": users_count,
         "orders_count": orders_count,
         "products_count": products_count,
-        "total_revenue": total_revenue
+        "total_revenue": total_revenue,
+        "is_custom_revenue": custom_revenue is not None
     }
+
+@api_router.put("/admin/stats/revenue")
+async def update_admin_revenue(revenue: float, user: User = Depends(require_admin)):
+    """Admin can override the total revenue shown in stats"""
+    await db.admin_settings.update_one(
+        {"settings_id": "admin_settings"},
+        {"$set": {"custom_revenue": revenue}},
+        upsert=True
+    )
+    return {"message": "Выручка обновлена", "new_revenue": revenue}
+
+@api_router.delete("/admin/stats/revenue")
+async def reset_admin_revenue(user: User = Depends(require_admin)):
+    """Reset revenue to real calculated value"""
+    await db.admin_settings.update_one(
+        {"settings_id": "admin_settings"},
+        {"$unset": {"custom_revenue": ""}}
+    )
+    return {"message": "Выручка сброшена к реальным значениям"}
 
 # ==================== PROMO CODES ====================
 
@@ -1927,15 +1954,15 @@ async def track_order(order_id: str, user: User = Depends(require_user)):
         "total": order.get("total", 0)
     }
 
-@api_router.post("/orders/{order_id}/return")
-async def return_order(order_id: str, user: User = Depends(require_user)):
-    """User can return their order within 24 hours for 90% refund"""
+@api_router.post("/orders/{order_id}/return-request")
+async def request_order_return(order_id: str, user: User = Depends(require_user)):
+    """User requests a return for their order within 24 hours"""
     order = await db.orders.find_one({"order_id": order_id, "user_id": user.user_id})
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
     
-    if order.get("status") in ["returned", "cancelled"]:
-        raise HTTPException(status_code=400, detail="Заказ уже возвращен или отменен")
+    if order.get("status") in ["returned", "return_pending", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Заказ уже возвращен, ожидает возврата или отменен")
     
     # Check 24 hours limit
     created_at = order.get("created_at")
@@ -1946,28 +1973,18 @@ async def return_order(order_id: str, user: User = Depends(require_user)):
     if now - created_at > timedelta(hours=24):
         raise HTTPException(status_code=400, detail="Срок возврата (24 часа) истек")
     
-    # Calculate refund (90%)
-    total_spent = order.get("total", 0)
-    refund_amount = round(total_spent * 0.9, 2)
-    
-    # Update user balance
-    await db.users.update_one(
-        {"user_id": user.user_id},
-        {"$inc": {"balance": refund_amount}}
-    )
-    
-    # Update order status
+    # Update order status to return_pending
     status_entry = {
-        "status": "returned",
+        "status": "return_pending",
         "timestamp": now.isoformat(),
-        "note": f"Возврат товара пользователем. Возвращено 90% средств ({refund_amount})"
+        "note": "Пользователь запросил возврат товара. Ожидается одобрение администратора."
     }
     
     await db.orders.update_one(
         {"order_id": order_id},
         {
             "$set": {
-                "status": "returned",
+                "status": "return_pending",
                 "updated_at": now.isoformat()
             },
             "$push": {"status_history": status_entry}
@@ -1975,7 +1992,54 @@ async def return_order(order_id: str, user: User = Depends(require_user)):
     )
     
     return {
-        "message": "Заказ успешно возвращен",
+        "message": "Запрос на возврат отправлен администратору",
+        "new_status": "return_pending"
+    }
+
+@api_router.post("/admin/orders/{order_id}/approve-return")
+async def approve_order_return(order_id: str, user: User = Depends(require_admin)):
+    """Admin approves the return and 90% is automatically refunded to user balance"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    if order.get("status") != "return_pending":
+        raise HTTPException(status_code=400, detail="Заказ не находится в статусе ожидания возврата")
+    
+    # Calculate refund (90%)
+    total_spent = order.get("total", 0)
+    refund_amount = round(total_spent * 0.9, 2)
+    order_user_id = order.get("user_id")
+    
+    # Update user balance
+    await db.users.update_one(
+        {"user_id": order_user_id},
+        {"$inc": {"balance": refund_amount}}
+    )
+    
+    # Update order status to returned
+    now = datetime.now(timezone.utc)
+    status_entry = {
+        "status": "returned",
+        "timestamp": now.isoformat(),
+        "note": f"Возврат одобрен администратором ({user.email}). Возвращено 90% средств ({refund_amount}) на счет пользователя.",
+        "updated_by": user.email
+    }
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "status": "returned",
+                "updated_at": now.isoformat(),
+                "refund_amount": refund_amount
+            },
+            "$push": {"status_history": status_entry}
+        }
+    )
+    
+    return {
+        "message": "Возврат одобрен, средства возвращены пользователю",
         "refund_amount": refund_amount,
         "new_status": "returned"
     }
