@@ -1923,7 +1923,61 @@ async def track_order(order_id: str, user: User = Depends(require_user)):
         "tracking_number": order.get("tracking_number"),
         "status_history": order.get("status_history", []),
         "created_at": order.get("created_at"),
-        "updated_at": order.get("updated_at")
+        "updated_at": order.get("updated_at"),
+        "total": order.get("total", 0)
+    }
+
+@api_router.post("/orders/{order_id}/return")
+async def return_order(order_id: str, user: User = Depends(require_user)):
+    """User can return their order within 24 hours for 90% refund"""
+    order = await db.orders.find_one({"order_id": order_id, "user_id": user.user_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    if order.get("status") in ["returned", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Заказ уже возвращен или отменен")
+    
+    # Check 24 hours limit
+    created_at = order.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+    
+    now = datetime.now(timezone.utc)
+    if now - created_at > timedelta(hours=24):
+        raise HTTPException(status_code=400, detail="Срок возврата (24 часа) истек")
+    
+    # Calculate refund (90%)
+    total_spent = order.get("total", 0)
+    refund_amount = round(total_spent * 0.9, 2)
+    
+    # Update user balance
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$inc": {"balance": refund_amount}}
+    )
+    
+    # Update order status
+    status_entry = {
+        "status": "returned",
+        "timestamp": now.isoformat(),
+        "note": f"Возврат товара пользователем. Возвращено 90% средств ({refund_amount})"
+    }
+    
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {
+            "$set": {
+                "status": "returned",
+                "updated_at": now.isoformat()
+            },
+            "$push": {"status_history": status_entry}
+        }
+    )
+    
+    return {
+        "message": "Заказ успешно возвращен",
+        "refund_amount": refund_amount,
+        "new_status": "returned"
     }
 
 # ==================== BANK CARDS API ====================
