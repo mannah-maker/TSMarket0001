@@ -48,6 +48,12 @@ export const productsAPI = {
   delete: (id) => api.delete(`/products/${id}`),
 };
 
+// Reviews API
+export const reviewsAPI = {
+  getForProduct: (productId) => api.get(`/reviews/${productId}`),
+  create: (data) => api.post('/reviews', data),
+};
+
 // Orders API
 export const ordersAPI = {
   create: (items, deliveryAddress, phoneNumber, promoCode = null) => api.post('/orders', { 
