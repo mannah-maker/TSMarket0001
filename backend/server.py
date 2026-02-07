@@ -1760,6 +1760,16 @@ async def delete_reward(reward_id: str, user: User = Depends(require_helper_or_a
         raise HTTPException(status_code=404, detail="Reward not found")
     return {"message": "Reward deleted"}
 
+@api_router.put("/admin/rewards/{reward_id}")
+async def update_reward(reward_id: str, data: RewardCreate, user: User = Depends(require_helper_or_admin)):
+    result = await db.rewards.update_one(
+        {"reward_id": reward_id},
+        {"$set": data.model_dump()}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    return {"message": "Reward updated"}
+
 @api_router.post("/admin/wheel-prizes", response_model=WheelPrize)
 async def create_wheel_prize(data: WheelPrizeCreate, user: User = Depends(require_helper_or_admin)):
     prize = WheelPrize(**data.model_dump())
@@ -1772,6 +1782,16 @@ async def delete_wheel_prize(prize_id: str, user: User = Depends(require_helper_
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Prize not found")
     return {"message": "Prize deleted"}
+
+@api_router.put("/admin/wheel-prizes/{prize_id}")
+async def update_wheel_prize(prize_id: str, data: WheelPrizeCreate, user: User = Depends(require_helper_or_admin)):
+    result = await db.wheel_prizes.update_one(
+        {"prize_id": prize_id},
+        {"$set": data.model_dump()}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Prize not found")
+    return {"message": "Prize updated"}
 
 @api_router.get("/admin/orders")
 async def get_all_orders(user: User = Depends(require_helper_or_admin)):
@@ -2089,9 +2109,25 @@ async def create_mission(data: MissionCreate, user: User = Depends(require_helpe
 async def delete_mission(mission_id: str, user: User = Depends(require_helper_or_admin)):
     result = await db.missions.delete_one({"mission_id": mission_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Миссия не найдена")
-    return {"message": "Миссия удалена"}
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return {"message": "Mission deleted"}
 
+@api_router.put("/admin/missions/{mission_id}")
+async def update_mission(mission_id: str, data: MissionCreate, user: User = Depends(require_helper_or_admin)):
+    mission_dict = data.model_dump()
+    if mission_dict.get("expires_at"):
+        try:
+            mission_dict["expires_at"] = datetime.fromisoformat(mission_dict["expires_at"]).isoformat()
+        except:
+            pass
+    
+    result = await db.missions.update_one(
+        {"mission_id": mission_id},
+        {"$set": mission_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return {"message": "Mission updated"}
 @api_router.put("/admin/missions/{mission_id}/toggle")
 async def toggle_mission(mission_id: str, user: User = Depends(require_helper_or_admin)):
     mission = await db.missions.find_one({"mission_id": mission_id}, {"_id": 0})
