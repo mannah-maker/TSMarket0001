@@ -548,6 +548,7 @@ class Mission(BaseModel):
     target_value: float  # e.g., 5 orders, 1000 coins spent, level 5
     reward_type: str  # "coins", "xp", "spin"
     reward_value: float
+    min_level: int = 1
     is_active: bool = True
     expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -559,6 +560,7 @@ class MissionCreate(BaseModel):
     target_value: float
     reward_type: str
     reward_value: float
+    min_level: int = 1
     expires_at: Optional[str] = None
 
 # User mission progress
@@ -2011,8 +2013,14 @@ async def update_product_tags(product_id: str, tags: List[str], user: User = Dep
 
 @api_router.get("/missions")
 async def get_missions(user: User = Depends(require_user)):
-    # Get active missions
-    missions = await db.missions.find({"is_active": True}, {"_id": 0}).to_list(100)
+    # Get active missions that match user level
+    missions = await db.missions.find({
+        "is_active": True,
+        "$or": [
+            {"min_level": {"$lte": user.level}},
+            {"min_level": {"$exists": False}}
+        ]
+    }, {"_id": 0}).to_list(100)
     
     # Get user's progress on missions
     user_missions = await db.user_missions.find(
@@ -2091,7 +2099,8 @@ async def create_mission(data: MissionCreate, user: User = Depends(require_helpe
         mission_type=data.mission_type,
         target_value=data.target_value,
         reward_type=data.reward_type,
-        reward_value=data.reward_value
+        reward_value=data.reward_value,
+        min_level=data.min_level
     )
     if data.expires_at:
         mission.expires_at = datetime.fromisoformat(data.expires_at)
@@ -2141,9 +2150,18 @@ async def toggle_mission(mission_id: str, user: User = Depends(require_helper_or
 # Helper to update mission progress
 async def update_mission_progress(user_id: str, mission_type: str, value: float):
     """Update user's mission progress based on action type"""
+    # Get user to check level
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        return
+
     missions = await db.missions.find({
         "is_active": True,
-        "mission_type": mission_type
+        "mission_type": mission_type,
+        "$or": [
+            {"min_level": {"$lte": user.get("level", 1)}},
+            {"min_level": {"$exists": False}}
+        ]
     }, {"_id": 0}).to_list(100)
     
     for mission in missions:
