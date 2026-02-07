@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { productsAPI } from '../lib/api';
+import { Textarea } from '../components/ui/textarea';
+import { productsAPI, reviewsAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus, ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { 
+  ShoppingCart, ArrowLeft, Sparkles, Package, Minus, Plus, 
+  ChevronLeft, ChevronRight, CheckCircle, XCircle, Clock,
+  Star, MessageSquare, Send, User
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 // Helper function to get localized text
@@ -20,7 +25,7 @@ const getLocalizedText = (item, field, lang) => {
 export const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addItem } = useCart();
   const { t, lang } = useLanguage();
   
@@ -30,24 +35,36 @@ export const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewComment, setNewReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndReviews = async () => {
       try {
-        const res = await productsAPI.getOne(id);
-        setProduct(res.data);
-        if (res.data.sizes?.length > 0) {
-          setSelectedSize(res.data.sizes[0]);
+        const [prodRes, reviewsRes] = await Promise.all([
+          productsAPI.getOne(id),
+          reviewsAPI.getForProduct(id)
+        ]);
+        
+        setProduct(prodRes.data);
+        setReviews(reviewsRes.data);
+        
+        if (prodRes.data.sizes?.length > 0) {
+          setSelectedSize(prodRes.data.sizes[0]);
         }
       } catch (error) {
-        console.error('Failed to fetch product:', error);
+        console.error('Failed to fetch data:', error);
         toast.error('Product not found');
         navigate('/catalog');
       } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
+    fetchProductAndReviews();
   }, [id, navigate]);
 
   const handleAddToCart = () => {
@@ -64,6 +81,36 @@ export const ProductDetail = () => {
     
     addItem(product, quantity, selectedSize || null);
     toast.success(`${getLocalizedText(product, 'name', lang)} ${lang === 'ru' ? 'добавлен в корзину!' : 'ба сабад илова шуд!'}`);
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error(t('product.pleaseLogin'));
+      return;
+    }
+    if (!newReviewComment.trim()) {
+      toast.error('Please enter a comment');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await reviewsAPI.create({
+        product_id: id,
+        rating: newReviewRating,
+        comment: newReviewComment
+      });
+      setReviews([res.data, ...reviews]);
+      setNewReviewComment('');
+      setNewReviewRating(5);
+      toast.success('Review added!');
+    } catch (error) {
+      console.error('Failed to add review:', error);
+      toast.error('Failed to add review');
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const productImages = product?.images?.length > 0 ? product.images : [product?.image_url];
@@ -112,7 +159,7 @@ export const ProductDetail = () => {
           {lang === 'ru' ? 'Назад' : 'Бозгашт'}
         </Button>
 
-        <div className="grid md:grid-cols-2 gap-12">
+        <div className="grid md:grid-cols-2 gap-12 mb-16">
           {/* Product Image Gallery */}
           <div className="space-y-4">
             <div className="relative group">
@@ -301,6 +348,113 @@ export const ProductDetail = () => {
             <p className="text-center text-sm text-muted-foreground">
               {lang === 'ru' ? 'Вы заработаете' : 'Шумо ба даст меоред'} <strong>{product.xp_reward * quantity} XP</strong> {lang === 'ru' ? 'всего' : 'дар маҷмӯъ'}
             </p>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="space-y-12">
+          <div className="flex items-center justify-between border-b pb-4">
+            <h2 className="text-3xl font-bold flex items-center gap-3">
+              <MessageSquare className="w-8 h-8 text-primary" />
+              {t('product.reviews')} ({reviews.length})
+            </h2>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-12">
+            {/* Review Form */}
+            <div className="lg:col-span-1">
+              <div className="tsmarket-card p-6 sticky top-24">
+                <h3 className="text-xl font-bold mb-6">{t('product.addReview')}</h3>
+                {isAuthenticated ? (
+                  <form onSubmit={handleSubmitReview} className="space-y-6">
+                    <div>
+                      <label className="text-sm font-bold mb-3 block">{t('product.rating')}</label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setNewReviewRating(star)}
+                            className="transition-transform hover:scale-110"
+                          >
+                            <Star 
+                              className={`w-8 h-8 ${star <= newReviewRating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-bold mb-3 block">{t('product.comment')}</label>
+                      <Textarea
+                        value={newReviewComment}
+                        onChange={(e) => setNewReviewComment(e.target.value)}
+                        placeholder="..."
+                        className="tsmarket-input min-h-[120px] resize-none"
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full tsmarket-btn-primary rounded-full py-6"
+                      disabled={submittingReview}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {t('product.submit')}
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="text-center py-8 space-y-4">
+                    <p className="text-muted-foreground">{t('product.pleaseLogin')}</p>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-full"
+                      onClick={() => navigate('/auth')}
+                    >
+                      {lang === 'ru' ? 'Войти' : 'Вуруд'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Reviews List */}
+            <div className="lg:col-span-2 space-y-6">
+              {reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.review_id} className="tsmarket-card p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-bold">{review.user_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(review.created_at).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star 
+                            key={star}
+                            className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {review.comment}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="tsmarket-card p-12 text-center">
+                  <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <p className="text-muted-foreground">{t('product.noReviews')}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
