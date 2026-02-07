@@ -2325,6 +2325,7 @@ export const Admin = () => {
                   <SelectContent>
                     <SelectItem value="user">Пользователь</SelectItem>
                     <SelectItem value="helper">Помощник</SelectItem>
+                    <SelectItem value="delivery">Доставщик</SelectItem>
                     <SelectItem value="admin">Админ</SelectItem>
                   </SelectContent>
                 </Select>
