@@ -1933,6 +1933,7 @@ export const Admin = () => {
                       <SelectItem value="purchase">Покупки</SelectItem>
                       <SelectItem value="topup">Пополнения</SelectItem>
                       <SelectItem value="level">Достичь уровня</SelectItem>
+                      <SelectItem value="review">Оставить отзыв</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
