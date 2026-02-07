@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { adminAPI, productsAPI, categoriesAPI } from '../lib/api';
 import { 
-  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle, Edit2, Gift, Sparkles, Target, Edit
+  Package, ShoppingCart, CreditCard, Loader2, Check, X, Eye, Plus, Trash2, Clock, CheckCircle, XCircle, Edit2, Gift, Sparkles, Target, Edit, MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -912,6 +912,7 @@ export const Helper = () => {
                     <option value="purchase">Покупки</option>
                     <option value="topup">Пополнения</option>
                     <option value="level">Достичь уровня</option>
+                    <option value="review">Оставить отзыв</option>
                   </select>
                 </div>
                 <div>
