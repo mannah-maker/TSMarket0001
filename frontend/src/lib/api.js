@@ -64,6 +64,7 @@ export const ordersAPI = {
   }),
   getAll: () => api.get('/orders'),
   track: (orderId) => api.get(`/orders/${orderId}/track`),
+  return: (orderId) => api.post(`/orders/${orderId}/return`),
 };
 
 // Promo API
