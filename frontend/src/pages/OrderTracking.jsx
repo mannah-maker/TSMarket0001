@@ -57,6 +57,13 @@ const statusConfig = {
     bg: 'bg-gray-500/20',
     ru: 'Возвращён',
     tj: 'Бозгашт шуд'
+  },
+  return_pending: { 
+    icon: Clock, 
+    color: 'text-purple-500', 
+    bg: 'bg-purple-500/20',
+    ru: 'Ожидает возврата',
+    tj: 'Интизории бозгашт'
   }
 };
 
@@ -112,7 +119,7 @@ export const OrderTracking = () => {
 
   const canReturn = () => {
     if (!order) return false;
-    if (order.status === 'returned' || order.status === 'cancelled') return false;
+    if (order.status === 'returned' || order.status === 'cancelled' || order.status === 'return_pending') return false;
     
     const createdAt = new Date(order.created_at);
     const now = new Date();
