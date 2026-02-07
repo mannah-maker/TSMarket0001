@@ -50,6 +50,13 @@ const statusConfig = {
     bg: 'bg-red-500/20',
     ru: 'Отменён',
     tj: 'Бекор карда шуд'
+  },
+  returned: { 
+    icon: ArrowLeft, 
+    color: 'text-gray-500', 
+    bg: 'bg-gray-500/20',
+    ru: 'Возвращён',
+    tj: 'Бозгашт шуд'
   }
 };
 
@@ -60,6 +67,7 @@ export const OrderTracking = () => {
   const { lang } = useLanguage();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [returning, setReturning] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -83,6 +91,33 @@ export const OrderTracking = () => {
       navigator.clipboard.writeText(order.tracking_number);
       toast.success(lang === 'ru' ? 'Скопировано!' : 'Нусхабардорӣ шуд!');
     }
+  };
+
+  const handleReturn = async () => {
+    if (!window.confirm(lang === 'ru' ? 'Вы уверены, что хотите вернуть товар? Вам будет возвращено 90% от стоимости.' : 'Шумо мутмаин ҳастед, ки мехоҳед молро баргардонед? Ба шумо 90% маблағ баргардонида мешавад.')) {
+      return;
+    }
+
+    setReturning(true);
+    try {
+      const res = await ordersAPI.return(orderId);
+      toast.success(res.data.message);
+      fetchOrderTracking();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Ошибка при возврате');
+    } finally {
+      setReturning(false);
+    }
+  };
+
+  const canReturn = () => {
+    if (!order) return false;
+    if (order.status === 'returned' || order.status === 'cancelled') return false;
+    
+    const createdAt = new Date(order.created_at);
+    const now = new Date();
+    const diffHours = (now - createdAt) / (1000 * 60 * 60);
+    return diffHours <= 24;
   };
 
   const getCurrentStatusIndex = () => {
@@ -142,23 +177,41 @@ export const OrderTracking = () => {
 
         {/* Current Status Card */}
         <div className={`tsmarket-card p-6 mb-8 border-l-4 ${currentConfig.color.replace('text-', 'border-')}`}>
-          <div className="flex items-center gap-4">
-            <div className={`w-16 h-16 rounded-full ${currentConfig.bg} flex items-center justify-center`}>
-              <StatusIcon className={`w-8 h-8 ${currentConfig.color}`} />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {lang === 'ru' ? 'Текущий статус' : 'Вазъияти ҳозира'}
-              </p>
-              <h2 className={`text-2xl font-bold ${currentConfig.color}`}>
-                {lang === 'ru' ? currentConfig.ru : currentConfig.tj}
-              </h2>
-              {order.updated_at && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {lang === 'ru' ? 'Обновлено' : 'Навсозӣ'}: {new Date(order.updated_at).toLocaleString()}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className={`w-16 h-16 rounded-full ${currentConfig.bg} flex items-center justify-center`}>
+                <StatusIcon className={`w-8 h-8 ${currentConfig.color}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {lang === 'ru' ? 'Текущий статус' : 'Вазъияти ҳозира'}
                 </p>
-              )}
+                <h2 className={`text-2xl font-bold ${currentConfig.color}`}>
+                  {lang === 'ru' ? currentConfig.ru : currentConfig.tj}
+                </h2>
+                {order.updated_at && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {lang === 'ru' ? 'Обновлено' : 'Навсозӣ'}: {new Date(order.updated_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
+
+            {canReturn() && (
+              <Button 
+                variant="destructive" 
+                onClick={handleReturn}
+                disabled={returning}
+                className="w-full md:w-auto"
+              >
+                {returning ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                )}
+                {lang === 'ru' ? 'Вернуть товар (90%)' : 'Бозгашти мол (90%)'}
+              </Button>
+            )}
           </div>
         </div>
 
