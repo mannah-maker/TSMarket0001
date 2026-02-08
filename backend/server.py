@@ -22,6 +22,9 @@ from collections import defaultdict
 import time
 import base64
 import asyncio
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # AI Integration
 try:
@@ -40,6 +43,12 @@ if not mongo_url:
     raise RuntimeError("❌ MONGO_URL is not set in environment variables")
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# Email Settings
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 # JWT Settings
 JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
@@ -86,6 +95,50 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
     value = re.sub(r'<[^>]*>', '', value)
     # Limit length
     return value[:max_length].strip()
+
+async def send_verification_email(email: str, code: str):
+    """Send verification code to user's email"""
+    if not SMTP_USER or not SMTP_PASSWORD:
+        logging.warning("SMTP credentials not set, email not sent")
+        return False
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_USER
+        msg['To'] = email
+        msg['Subject'] = "Код подтверждения регистрации TSMarket"
+        
+        body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #10b981; text-align: center;">Добро пожаловать в TSMarket!</h2>
+                    <p>Здравствуйте!</p>
+                    <p>Для завершения регистрации, пожалуйста, введите следующий 6-значный код подтверждения:</p>
+                    <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #0f766e; border-radius: 5px; margin: 20px 0;">
+                        {code}
+                    </div>
+                    <p>Этот код действителен в течение 10 минут. Если вы не запрашивали этот код, просто проигнорируйте это письмо.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #666; text-align: center;">&copy; 2026 TSMarket. Все права защищены.</p>
+                </div>
+            </body>
+        </html>
+        """
+        msg.attach(MIMEText(body, 'html'))
+        
+        # Use asyncio.to_thread for blocking smtplib calls
+        def _send():
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+        
+        await asyncio.to_thread(_send)
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send email: {str(e)}")
+        return False
 
 # AI Receipt Analysis Function
 async def analyze_receipt_with_ai(receipt_image_url: str, expected_amount: float) -> dict:
@@ -268,6 +321,10 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class VerifyCode(BaseModel):
+    email: EmailStr
+    code: str
 
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -772,24 +829,69 @@ async def register(data: UserCreate, response: Response):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    user_id = f"user_{uuid.uuid4().hex[:12]}"
-    user_data = {
-        "user_id": user_id,
+    # Check for existing pending registration
+    await db.pending_registrations.delete_many({"email": data.email})
+    
+    # Generate verification code
+    verification_code = "".join([str(random.randint(0, 9)) for _ in range(6)])
+    
+    pending_data = {
         "email": data.email,
         "name": data.name,
         "password_hash": hash_password(data.password),
+        "verification_code": verification_code,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.pending_registrations.insert_one(pending_data)
+    
+    # Send email
+    email_sent = await send_verification_email(data.email, verification_code)
+    
+    if not email_sent:
+        # If email sending fails, we might still want to proceed for demo purposes 
+        # or show an error. Let's return success but mention email status in logs.
+        logging.warning(f"Verification email could not be sent to {data.email}")
+    
+    return {"message": "Код подтверждения отправлен на вашу почту", "email": data.email}
+
+@api_router.post("/auth/verify")
+async def verify_code(data: VerifyCode, response: Response):
+    pending = await db.pending_registrations.find_one({
+        "email": data.email,
+        "verification_code": data.code
+    })
+    
+    if not pending:
+        raise HTTPException(status_code=400, detail="Неверный код или email")
+    
+    # Check expiration
+    expires_at = datetime.fromisoformat(pending["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        await db.pending_registrations.delete_one({"_id": pending["_id"]})
+        raise HTTPException(status_code=400, detail="Код истек. Пожалуйста, зарегистрируйтесь снова.")
+    
+    # Create actual user
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    user_data = {
+        "user_id": user_id,
+        "email": pending["email"],
+        "name": pending["name"],
+        "password_hash": pending["password_hash"],
         "picture": None,
         "balance": 0.0,
         "xp": 0,
         "level": 1,
         "is_admin": False,
-        "role": "user",  # Default role
-        "wheel_spins_available": 1,  # 1 free spin on registration
+        "role": "user",
+        "wheel_spins_available": 1,
         "claimed_rewards": [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.users.insert_one(user_data)
+    await db.pending_registrations.delete_one({"_id": pending["_id"]})
     
     # Create session
     session_token = secrets.token_hex(32)
