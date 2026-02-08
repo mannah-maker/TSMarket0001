@@ -2048,9 +2048,18 @@ async def approve_order_return(order_id: str, user: User = Depends(require_admin
     
     return {
         "message": "Возврат одобрен, средства возвращены пользователю",
-        "refund_amount": refund_amount,
-        "new_status": "returned"
+        "new_status": "returned",
+        "refund_amount": refund_amount
     }
+
+@api_router.delete("/admin/orders/{order_id}")
+async def delete_order(order_id: str, user: User = Depends(require_admin)):
+    """Admin deletes an order"""
+    result = await db.orders.delete_one({"order_id": order_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    return {"message": "Заказ успешно удален"}
 
 # ==================== BANK CARDS API ====================
 
