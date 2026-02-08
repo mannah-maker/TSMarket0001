@@ -25,6 +25,7 @@ api.interceptors.request.use((config) => {
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
+  verify: (data) => api.post('/auth/verify', data),
   login: (data) => api.post('/auth/login', data),
   processGoogleSession: (sessionId) => api.post('/auth/session', { session_id: sessionId }),
   getMe: () => api.get('/auth/me'),
