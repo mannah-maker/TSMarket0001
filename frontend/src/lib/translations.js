@@ -128,6 +128,11 @@ export const translations = {
       accountCreated: 'Аккаунт сохта шуд!',
       loginFailed: 'Вуруд ноком шуд',
       registerFailed: 'Бақайдгирӣ ноком шуд',
+      verificationCode: 'Коди тасдиқ',
+      enterCode: 'Коди 6-рақамаро ворид кунед',
+      verify: 'Тасдиқ кунед',
+      codeSent: 'Код ба почтаи шумо фиристода шуд',
+      invalidCode: 'Коди нодуруст ё мӯҳлати он гузаштааст',
     },
     // Profile
     profile: {
@@ -382,6 +387,11 @@ export const translations = {
       accountCreated: 'Аккаунт создан!',
       loginFailed: 'Ошибка входа',
       registerFailed: 'Ошибка регистрации',
+      verificationCode: 'Код подтверждения',
+      enterCode: 'Введите 6-значный код',
+      verify: 'Подтвердить',
+      codeSent: 'Код отправлен на вашу почту',
+      invalidCode: 'Неверный код или срок действия истек',
     },
     // Profile
     profile: {
