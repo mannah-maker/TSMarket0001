@@ -14,11 +14,13 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/ar
 export const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, register, isAuthenticated, user } = useAuth();
+  const { login, register, verify, isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
   
   const [mode, setMode] = useState(searchParams.get('mode') === 'register' ? 'register' : 'login');
   const [loading, setLoading] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -82,7 +84,26 @@ export const Auth = () => {
     
     setLoading(true);
     try {
-      const userData = await register(registerEmail, registerPassword, registerName);
+      await register(registerEmail, registerPassword, registerName);
+      toast.success(t('auth.codeSent'));
+      setShowVerification(true);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || t('auth.registerFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast.error(t('auth.enterCode'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const userData = await verify(registerEmail, verificationCode);
       toast.success(t('auth.accountCreated'));
       if (userData.role === 'delivery' && !userData.is_admin) {
         navigate('/delivery');
@@ -90,7 +111,7 @@ export const Auth = () => {
         navigate('/profile');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || t('auth.registerFailed'));
+      toast.error(error.response?.data?.detail || t('auth.invalidCode'));
     } finally {
       setLoading(false);
     }
@@ -171,7 +192,46 @@ export const Auth = () => {
 
             {/* Register Form */}
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
+              {showVerification ? (
+                <form onSubmit={handleVerify} className="space-y-4">
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-muted-foreground">{t('auth.codeSent')}:</p>
+                    <p className="font-bold">{registerEmail}</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="verification-code">{t('auth.verificationCode')}</Label>
+                    <div className="relative mt-1">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="verification-code"
+                        type="text"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                        className="pl-10 tsmarket-input text-center text-2xl tracking-[10px]"
+                        data-testid="verification-code"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full tsmarket-btn-primary rounded-full py-6"
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('auth.verify')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setShowVerification(false)}
+                  >
+                    {t('product.back')}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <Label htmlFor="register-name">{t('auth.name')}</Label>
                   <div className="relative mt-1">
