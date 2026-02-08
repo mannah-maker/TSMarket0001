@@ -2194,8 +2194,15 @@ async def take_delivery_order(order_id: str, user: User = Depends(require_delive
         "updated_by": user.email
     }
     
-    await db.orders.update_one(
-        {"order_id": order_id},
+    # Use atomic update with condition to prevent race conditions
+    result = await db.orders.update_one(
+        {
+            "order_id": order_id,
+            "$or": [
+                {"delivery_user_id": None},
+                {"delivery_user_id": {"$exists": False}}
+            ]
+        },
         {
             "$set": {
                 "delivery_user_id": user.user_id,
@@ -2205,6 +2212,12 @@ async def take_delivery_order(order_id: str, user: User = Depends(require_delive
             "$push": {"status_history": status_entry}
         }
     )
+    
+    if result.modified_count == 0:
+        # Check if it was already taken by this user (idempotency)
+        if order.get("delivery_user_id") == user.user_id:
+            return {"message": "Вы уже приняли этот заказ", "status": order.get("status")}
+        raise HTTPException(status_code=400, detail="Заказ уже принят другим доставщиком")
     
     return {"message": "Заказ принят в доставку", "status": "processing"}
 
