@@ -40,6 +40,11 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, name) => {
     const response = await authAPI.register({ email, password, name });
+    return response.data;
+  };
+
+  const verify = async (email, code) => {
+    const response = await authAPI.verify({ email, code });
     const { user: userData, token } = response.data;
     localStorage.setItem('session_token', token);
     setUser(userData);
@@ -78,6 +83,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    verify,
     logout,
     processGoogleAuth,
     refreshUser,
