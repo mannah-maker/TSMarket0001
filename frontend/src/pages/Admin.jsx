@@ -1133,6 +1133,39 @@ export const Admin = () => {
               </label>
             </div>
 
+            {/* Shop Theme Settings */}
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-400" />
+                Стиль оформления магазина
+              </h3>
+              <p className="text-sm text-slate-400 mb-4">
+                Выберите праздничную тему, чтобы изменить баннеры и цвета магазина одним кликом.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { id: 'default', name: 'Обычный', icon: '🛒', color: 'bg-slate-700' },
+                  { id: 'new_year', name: 'Новый Год', icon: '🎄', color: 'bg-blue-600' },
+                  { id: 'valentine', name: '14 Февраля', icon: '❤️', color: 'bg-rose-500' },
+                  { id: 'men_day', name: '23 Февраля', icon: '🎖️', color: 'bg-emerald-700' }
+                ].map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => setAdminSettings({...adminSettings, active_theme: theme.id})}
+                    className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                      (adminSettings.active_theme || 'default') === theme.id 
+                        ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(13,148,136,0.3)]' 
+                        : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
+                    }`}
+                  >
+                    <span className="text-2xl">{theme.icon}</span>
+                    <span className="text-xs font-bold uppercase">{theme.name}</span>
+                    <div className={`w-full h-1 rounded-full ${theme.color}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Button onClick={handleSaveSettings} className="w-full" data-testid="save-settings-btn">
               {t('admin.saveSettings')}
             </Button>
