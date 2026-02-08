@@ -35,6 +35,7 @@ export const Admin = () => {
   const [tags, setTags] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
   const [bankCards, setBankCards] = useState([]);
+  const [themes, setThemes] = useState([]);
 
   // Form states
   const [newProduct, setNewProduct] = useState({ 
@@ -50,6 +51,8 @@ export const Admin = () => {
   const [newMission, setNewMission] = useState({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100, min_level: 1 });
   const [newTag, setNewTag] = useState({ name: '', slug: '', color: '#0D9488' });
   const [newBankCard, setNewBankCard] = useState({ card_number: '', card_holder: '', bank_name: '' });
+  const [newTheme, setNewTheme] = useState({ name: '', icon: '🎨', hero_image: '', gradient: '', title_color: '', tagline: '' });
+  const [showThemeForm, setShowThemeForm] = useState(false);
   const [productImages, setProductImages] = useState([]);
   const [imageUrls, setImageUrls] = useState(['']);
   
@@ -146,6 +149,12 @@ export const Admin = () => {
         ticketsData = ticketsRes.data;
       } catch (e) {}
 
+      let themesData = [];
+      try {
+        const themesRes = await adminAPI.getThemes();
+        themesData = themesRes.data;
+      } catch (e) {}
+
       setStats(statsRes.data);
       setUsers(usersRes.data);
       setProducts(productsRes.data);
@@ -161,6 +170,7 @@ export const Admin = () => {
       setMissions(missionsData);
       setSupportTickets(ticketsData);
       setBankCards(cardsData);
+      setThemes(themesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Ошибка загрузки данных');
@@ -315,7 +325,8 @@ export const Admin = () => {
         support_whatsapp: adminSettings.support_whatsapp || '',
         support_email: adminSettings.support_email || '',
         support_phone: adminSettings.support_phone || '',
-        ai_auto_approve_enabled: adminSettings.ai_auto_approve_enabled || false
+        ai_auto_approve_enabled: adminSettings.ai_auto_approve_enabled || false,
+        active_theme: adminSettings.active_theme || 'default'
       });
       toast.success('Settings saved');
     } catch (error) {
@@ -324,6 +335,30 @@ export const Admin = () => {
   };
 
   // Admin profile handlers
+  const handleCreateTheme = async (e) => {
+    e.preventDefault();
+    try {
+      await adminAPI.createTheme(newTheme);
+      toast.success('Тема создана!');
+      setNewTheme({ name: '', icon: '🎨', hero_image: '', gradient: '', title_color: '', tagline: '' });
+      setShowThemeForm(false);
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка создания темы');
+    }
+  };
+
+  const handleDeleteTheme = async (id) => {
+    if (!window.confirm('Удалить эту тему?')) return;
+    try {
+      await adminAPI.deleteTheme(id);
+      toast.success('Тема удалена');
+      fetchAllData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка удаления темы');
+    }
+  };
+
   const handleSaveAdminProfile = async () => {
     // Check secret key
     if (adminSecretKey !== ADMIN_SECRET) {
@@ -1142,28 +1177,109 @@ export const Admin = () => {
               <p className="text-sm text-slate-400 mb-4">
                 Выберите праздничную тему, чтобы изменить баннеры и цвета магазина одним кликом.
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { id: 'default', name: 'Обычный', icon: '🛒', color: 'bg-slate-700' },
-                  { id: 'new_year', name: 'Новый Год', icon: '🎄', color: 'bg-blue-600' },
-                  { id: 'valentine', name: '14 Февраля', icon: '❤️', color: 'bg-rose-500' },
-                  { id: 'men_day', name: '23 Февраля', icon: '🎖️', color: 'bg-emerald-700' }
-                ].map((theme) => (
-                  <button
-                    key={theme.id}
-                    onClick={() => setAdminSettings({...adminSettings, active_theme: theme.id})}
-                    className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                      (adminSettings.active_theme || 'default') === theme.id 
-                        ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(13,148,136,0.3)]' 
-                        : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
-                    }`}
-                  >
-                    <span className="text-2xl">{theme.icon}</span>
-                    <span className="text-xs font-bold uppercase">{theme.name}</span>
-                    <div className={`w-full h-1 rounded-full ${theme.color}`} />
-                  </button>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                {themes.map((theme) => (
+                  <div key={theme.theme_id} className="relative group">
+                    <button
+                      onClick={() => setAdminSettings({...adminSettings, active_theme: theme.theme_id})}
+                      className={`w-full p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                        (adminSettings.active_theme || 'default') === theme.theme_id 
+                          ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(13,148,136,0.3)]' 
+                          : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
+                      }`}
+                    >
+                      <span className="text-2xl">{theme.icon}</span>
+                      <span className="text-xs font-bold uppercase">{theme.name}</span>
+                      <div className="w-full h-1 rounded-full bg-primary/30" />
+                    </button>
+                    {!theme.is_system && (
+                      <button 
+                        onClick={() => handleDeleteTheme(theme.theme_id)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 ))}
+                <button
+                  onClick={() => setShowThemeForm(!showThemeForm)}
+                  className="p-3 rounded-xl border-2 border-dashed border-slate-700 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-primary"
+                >
+                  <Plus className="w-6 h-6" />
+                  <span className="text-xs font-bold uppercase">Добавить</span>
+                </button>
               </div>
+
+              {showThemeForm && (
+                <form onSubmit={handleCreateTheme} className="space-y-4 p-4 border border-slate-700 rounded-xl bg-slate-800/30 mb-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Название темы</Label>
+                      <Input 
+                        value={newTheme.name} 
+                        onChange={e => setNewTheme({...newTheme, name: e.target.value})}
+                        placeholder="Напр: Весенний стиль"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Иконка (Emoji)</Label>
+                      <Input 
+                        value={newTheme.icon} 
+                        onChange={e => setNewTheme({...newTheme, icon: e.target.value})}
+                        placeholder="🌸"
+                        className="admin-input"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>URL Баннера (Hero Image)</Label>
+                      <Input 
+                        value={newTheme.hero_image} 
+                        onChange={e => setNewTheme({...newTheme, hero_image: e.target.value})}
+                        placeholder="https://images.unsplash.com/..."
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Gradient (Tailwind classes)</Label>
+                      <Input 
+                        value={newTheme.gradient} 
+                        onChange={e => setNewTheme({...newTheme, gradient: e.target.value})}
+                        placeholder="bg-gradient-to-br from-green-400 to-blue-500"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Цвет заголовка (Tailwind class)</Label>
+                      <Input 
+                        value={newTheme.title_color} 
+                        onChange={e => setNewTheme({...newTheme, title_color: e.target.value})}
+                        placeholder="text-green-500"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Тэглайн (Текст в бабле)</Label>
+                      <Input 
+                        value={newTheme.tagline} 
+                        onChange={e => setNewTheme({...newTheme, tagline: e.target.value})}
+                        placeholder="🌸 Весенние скидки!"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="flex-1">Создать тему</Button>
+                    <Button type="button" variant="outline" onClick={() => setShowThemeForm(false)}>Отмена</Button>
+                  </div>
+                </form>
+              )}
             </div>
 
             <Button onClick={handleSaveSettings} className="w-full" data-testid="save-settings-btn">
