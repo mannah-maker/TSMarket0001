@@ -492,6 +492,7 @@ class AdminSettingsUpdate(BaseModel):
     support_email: str = ""
     support_phone: str = ""
     ai_auto_approve_enabled: bool = False
+    active_theme: str = "default"
 
 class Reward(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1677,7 +1678,8 @@ async def update_admin_settings(data: AdminSettingsUpdate, user: User = Depends(
             "support_whatsapp": data.support_whatsapp,
             "support_email": data.support_email,
             "support_phone": data.support_phone,
-            "ai_auto_approve_enabled": data.ai_auto_approve_enabled
+            "ai_auto_approve_enabled": data.ai_auto_approve_enabled,
+            "active_theme": data.active_theme
         }},
         upsert=True
     )
