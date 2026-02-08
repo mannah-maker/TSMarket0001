@@ -182,6 +182,7 @@ export const supportAPI = {
   createTicket: (data) => api.post('/support/ticket', data),
   getUserTickets: () => api.get('/support/tickets'),
   getContacts: () => api.get('/support/contacts'),
+  getSettings: () => api.get('/support/contacts'), // Reuse getContacts as it returns the settings
 };
 
 // Seed API
