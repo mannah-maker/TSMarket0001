@@ -11,31 +11,11 @@ import { toast } from 'sonner';
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
 const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
 
-const THEMES = {
-  default: {
-    hero: HERO_IMAGE,
-    gradient: 'tsmarket-gradient',
-    titleColor: 'text-teal-500',
-    tagline: '🛒 Обычный стиль'
-  },
-  new_year: {
-    hero: 'https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=2070&auto=format&fit=crop',
-    gradient: 'bg-gradient-to-br from-blue-900 via-slate-900 to-blue-800 text-white',
-    titleColor: 'text-blue-400',
-    tagline: '🎄 С Новым Годом!'
-  },
-  valentine: {
-    hero: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2070&auto=format&fit=crop',
-    gradient: 'bg-gradient-to-br from-rose-100 via-pink-50 to-rose-200',
-    titleColor: 'text-rose-500',
-    tagline: '❤️ С Днем Влюбленных!'
-  },
-  men_day: {
-    hero: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=2070&auto=format&fit=crop',
-    gradient: 'bg-gradient-to-br from-emerald-900 via-slate-900 to-emerald-800 text-white',
-    titleColor: 'text-emerald-500',
-    tagline: '🎖️ С 23 Февраля!'
-  }
+const DEFAULT_THEME = {
+  hero: HERO_IMAGE,
+  gradient: 'tsmarket-gradient',
+  titleColor: 'text-teal-500',
+  tagline: '🛒 Обычный стиль'
 };
 
 const getLocalizedText = (item, field, lang) => {
@@ -67,21 +47,26 @@ export const Home = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTheme, setActiveTheme] = useState('default');
+  const [activeThemeId, setActiveThemeId] = useState('default');
+  const [themes, setThemes] = useState([]);
 
   const parentCategories = categories.filter(cat => !cat.parent_id);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes, settingsRes] = await Promise.all([
+        const [productsRes, categoriesRes, settingsRes, themesRes] = await Promise.all([
           productsAPI.getAll({ limit: 12 }),
           categoriesAPI.getAll(),
-          supportAPI.getSettings().catch(() => ({ data: { active_theme: 'default' } }))
+          supportAPI.getSettings().catch(() => ({ data: { active_theme: 'default' } })),
+          adminAPI.getThemes().catch(() => ({ data: [] }))
         ]);
         
         if (settingsRes?.data?.active_theme) {
-          setActiveTheme(settingsRes.data.active_theme);
+          setActiveThemeId(settingsRes.data.active_theme);
+        }
+        if (themesRes?.data) {
+          setThemes(themesRes.data);
         }
         
         const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
@@ -123,7 +108,13 @@ export const Home = () => {
     { icon: Gift, titleKey: 'home.spinWin', descKey: 'home.spinWinDesc' },
   ];
 
-  const theme = THEMES[activeTheme] || THEMES.default;
+  const activeThemeData = themes.find(t => t.theme_id === activeThemeId);
+  const theme = activeThemeData ? {
+    hero: activeThemeData.hero_image,
+    gradient: activeThemeData.gradient,
+    titleColor: activeThemeData.title_color,
+    tagline: activeThemeData.tagline
+  } : DEFAULT_THEME;
 
   return (
     <div className="min-h-screen" data-testid="home-page">
@@ -140,10 +131,10 @@ export const Home = () => {
                 <span className="text-green-500">TS</span>
                 <span className={`${theme.titleColor}`}>Market</span>
                 <br />
-                <span className={`${activeTheme === 'default' || activeTheme === 'valentine' ? 'text-foreground/80' : 'text-white/80'} text-3xl md:text-5xl`}>{t('home.heroSubtitle')}</span>
+                <span className={`${activeThemeId === 'default' || activeThemeId === 'valentine' ? 'text-foreground/80' : 'text-white/80'} text-3xl md:text-5xl`}>{t('home.heroSubtitle')}</span>
               </h1>
               
-              <p className={`text-lg ${activeTheme === 'default' || activeTheme === 'valentine' ? 'text-muted-foreground' : 'text-slate-300'} max-lg`}>
+              <p className={`text-lg ${activeThemeId === 'default' || activeThemeId === 'valentine' ? 'text-muted-foreground' : 'text-slate-300'} max-lg`}>
                 {t('home.heroDescription')}
               </p>
               
