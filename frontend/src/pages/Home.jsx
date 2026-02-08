@@ -1,25 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { productsAPI, categoriesAPI } from '../lib/api';
+import { productsAPI, categoriesAPI, supportAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ShoppingCart, Sparkles, Trophy, Gift, ArrowRight, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Access the same cache as Catalog.jsx
-// In a real app, this would be in a shared state or service
-const catalogCache = {
-  products: null,
-  categories: null,
-  timestamp: 0
-};
-
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
 const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
 
-// Helper function to get localized text
+const THEMES = {
+  default: {
+    hero: HERO_IMAGE,
+    gradient: 'tsmarket-gradient',
+    titleColor: 'text-teal-500',
+    tagline: '🛒 Обычный стиль'
+  },
+  new_year: {
+    hero: 'https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=2070&auto=format&fit=crop',
+    gradient: 'bg-gradient-to-br from-blue-900 via-slate-900 to-blue-800 text-white',
+    titleColor: 'text-blue-400',
+    tagline: '🎄 С Новым Годом!'
+  },
+  valentine: {
+    hero: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2070&auto=format&fit=crop',
+    gradient: 'bg-gradient-to-br from-rose-100 via-pink-50 to-rose-200',
+    titleColor: 'text-rose-500',
+    tagline: '❤️ С Днем Влюбленных!'
+  },
+  men_day: {
+    hero: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=2070&auto=format&fit=crop',
+    gradient: 'bg-gradient-to-br from-emerald-900 via-slate-900 to-emerald-800 text-white',
+    titleColor: 'text-emerald-500',
+    tagline: '🎖️ С 23 Февраля!'
+  }
+};
+
 const getLocalizedText = (item, field, lang) => {
   if (lang === 'ru' && item[`${field}_ru`]) return item[`${field}_ru`];
   if (lang === 'tj' && item[`${field}_tj`]) return item[`${field}_tj`];
@@ -49,44 +67,46 @@ export const Home = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTheme, setActiveTheme] = useState('default');
 
   const parentCategories = categories.filter(cat => !cat.parent_id);
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        productsAPI.getAll({ limit: 12 }), // Pre-fetch more for catalog cache
-        categoriesAPI.getAll(),
-      ]);
-      
-      const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
-      const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
-      
-      setProducts(productsData.slice(0, 4));
-      setCategories(categoriesData);
-
-      // Populate global cache for Catalog page
+    const fetchData = async () => {
       try {
-        window.__CATALOG_CACHE__ = {
-          products: productsData,
-          categories: categoriesData,
-          timestamp: Date.now()
-        };
-      } catch (e) {
-        // Fallback if window is not available
-      }
+        const [productsRes, categoriesRes, settingsRes] = await Promise.all([
+          productsAPI.getAll({ limit: 12 }),
+          categoriesAPI.getAll(),
+          supportAPI.getSettings().catch(() => ({ data: { active_theme: 'default' } }))
+        ]);
+        
+        if (settingsRes?.data?.active_theme) {
+          setActiveTheme(settingsRes.data.active_theme);
+        }
+        
+        const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
+        const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
+        
+        setProducts(productsData.slice(0, 4));
+        setCategories(categoriesData);
 
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-      setProducts([]);
-      setCategories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-  fetchData();
-}, []);
+        try {
+          window.__CATALOG_CACHE__ = {
+            products: productsData,
+            categories: categoriesData,
+            timestamp: Date.now()
+          };
+        } catch (e) {}
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+        setProducts([]);
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleAddToCart = (product) => {
     if (!isAuthenticated) {
@@ -103,27 +123,27 @@ export const Home = () => {
     { icon: Gift, titleKey: 'home.spinWin', descKey: 'home.spinWinDesc' },
   ];
 
+  const theme = THEMES[activeTheme] || THEMES.default;
+
   return (
     <div className="min-h-screen" data-testid="home-page">
-      {/* Hero Section */}
-      <section className="hero-section tsmarket-gradient relative" data-testid="hero-section">
+      <section className={`hero-section ${theme.gradient} relative`} data-testid="hero-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Hero Content */}
             <div className="space-y-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 rounded-full border border-border">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                <span className="text-sm font-bold uppercase tracking-wider">{t('common.storeTagline')}</span>
+                <span className="text-sm font-bold uppercase tracking-wider text-slate-900">{theme.tagline}</span>
               </div>
               
               <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none">
                 <span className="text-green-500">TS</span>
-                <span className="text-teal-500">Market</span>
+                <span className={`${theme.titleColor}`}>Market</span>
                 <br />
-                <span className="text-foreground/80 text-3xl md:text-5xl">{t('home.heroSubtitle')}</span>
+                <span className={`${activeTheme === 'default' || activeTheme === 'valentine' ? 'text-foreground/80' : 'text-white/80'} text-3xl md:text-5xl`}>{t('home.heroSubtitle')}</span>
               </h1>
               
-              <p className="text-lg text-muted-foreground max-w-lg">
+              <p className={`text-lg ${activeTheme === 'default' || activeTheme === 'valentine' ? 'text-muted-foreground' : 'text-slate-300'} max-lg`}>
                 {t('home.heroDescription')}
               </p>
               
@@ -144,13 +164,12 @@ export const Home = () => {
               </div>
             </div>
 
-            {/* Hero Image */}
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl blur-3xl" />
               <img
-                src={HERO_IMAGE}
-                alt="Gaming Setup"
-                className="relative rounded-3xl shadow-2xl transform hover:scale-[1.02] transition-transform duration-500"
+                src={theme.hero}
+                alt="Store Banner"
+                className="relative rounded-3xl shadow-2xl transform hover:scale-[1.02] transition-transform duration-500 aspect-video object-cover"
               />
               <div className="absolute -bottom-6 -left-6 animate-float">
                 <img src={LOGO_URL} alt="TSMarket Dragon" className="w-24 h-24 rounded-2xl shadow-xl" />
@@ -160,7 +179,6 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20 bg-white" data-testid="features-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -190,7 +208,6 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
       {categories.length > 0 && (
         <section className="py-20 tsmarket-gradient" data-testid="categories-section">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -218,7 +235,6 @@ export const Home = () => {
         </section>
       )}
 
-      {/* Popular Products Section */}
       <section className="py-20 bg-white" data-testid="products-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-12">
@@ -269,9 +285,8 @@ export const Home = () => {
                         size="sm"
                         className="tsmarket-btn-primary rounded-full w-8 h-8 md:w-10 md:h-10 p-0 flex items-center justify-center"
                         onClick={() => handleAddToCart(product)}
-                        data-testid={`add-to-cart-${product.product_id}`}
                       >
-                        <ShoppingCart className="w-3 h-3 md:w-4 h-4" />
+                        <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                       </Button>
                     </div>
                   </div>
@@ -279,48 +294,8 @@ export const Home = () => {
               ))}
             </div>
           )}
-
-          <div className="text-center mt-8 md:hidden">
-            <Link to="/catalog">
-              <Button variant="outline" className="rounded-full font-bold" data-testid="view-all-mobile-btn">
-                {t('home.viewAll')}
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-foreground text-background" data-testid="cta-section">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-            {t('home.readyToLevel')}
-          </h2>
-          <p className="text-xl text-background/70 mb-8">
-            {t('home.readyDesc')}
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            {!isAuthenticated ? (
-              <Link to="/auth?mode=register">
-                <Button className="tsmarket-btn-primary rounded-full px-10 py-6 text-lg" data-testid="cta-register-btn">
-                  {t('home.createAccount')}
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/catalog">
-                <Button className="tsmarket-btn-primary rounded-full px-10 py-6 text-lg" data-testid="cta-shop-btn">
-                  {t('home.shopNow')}
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-            )}
-          </div>
         </div>
       </section>
     </div>
   );
 };
-
-export default Home;
