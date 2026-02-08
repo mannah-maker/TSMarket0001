@@ -153,6 +153,10 @@ export const adminAPI = {
   updateUserRole: (userId, role) => api.put(`/admin/users/${userId}/role`, null, { params: { role } }),
   // Image upload
   uploadImage: (image) => api.post('/admin/upload-image', { image }),
+  // Themes
+  getThemes: () => api.get('/themes'),
+  createTheme: (data) => api.post('/admin/themes', data),
+  deleteTheme: (id) => api.delete(`/admin/themes/${id}`),
 };
 
 // Delivery API
