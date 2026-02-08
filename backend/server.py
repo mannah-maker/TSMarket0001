@@ -469,6 +469,26 @@ class TopUpRequestCreate(BaseModel):
     amount: float
     receipt_url: str
 
+class ShopTheme(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    theme_id: str = Field(default_factory=lambda: f"theme_{uuid.uuid4().hex[:12]}")
+    name: str
+    icon: str = "🎨"
+    hero_image: str
+    gradient: str
+    title_color: str
+    tagline: str
+    is_system: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ShopThemeCreate(BaseModel):
+    name: str
+    icon: str = "🎨"
+    hero_image: str
+    gradient: str
+    title_color: str
+    tagline: str
+
 class AdminSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     settings_id: str = "admin_settings"
@@ -482,6 +502,7 @@ class AdminSettings(BaseModel):
     support_phone: str = ""
     # AI Assistant
     ai_auto_approve_enabled: bool = False
+    active_theme: str = "default"
 
 class AdminSettingsUpdate(BaseModel):
     card_number: str
@@ -2697,6 +2718,55 @@ async def seed_database():
         {"prize_id": "prize_006", "name": "200 Coins JACKPOT!", "prize_type": "coins", "value": 200, "probability": 0.05, "color": "#FFD700"},
     ]
     await db.wheel_prizes.insert_many(wheel_prizes)
+
+    # Themes
+    themes = [
+        {
+            "theme_id": "default",
+            "name": "Обычный",
+            "icon": "🛒",
+            "hero_image": "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85",
+            "gradient": "tsmarket-gradient",
+            "title_color": "text-teal-500",
+            "tagline": "🛒 Обычный стиль",
+            "is_system": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "theme_id": "new_year",
+            "name": "Новый Год",
+            "icon": "🎄",
+            "hero_image": "https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=2070&auto=format&fit=crop",
+            "gradient": "bg-gradient-to-br from-blue-900 via-slate-900 to-blue-800 text-white",
+            "title_color": "text-blue-400",
+            "tagline": "🎄 С Новым Годом!",
+            "is_system": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "theme_id": "valentine",
+            "name": "14 Февраля",
+            "icon": "❤️",
+            "hero_image": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?q=80&w=2070&auto=format&fit=crop",
+            "gradient": "bg-gradient-to-br from-rose-100 via-pink-50 to-rose-200",
+            "title_color": "text-rose-500",
+            "tagline": "❤️ С Днем Влюбленных!",
+            "is_system": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
+            "theme_id": "men_day",
+            "name": "23 Февраля",
+            "icon": "🎖️",
+            "hero_image": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=2070&auto=format&fit=crop",
+            "gradient": "bg-gradient-to-br from-emerald-900 via-slate-900 to-emerald-800 text-white",
+            "title_color": "text-emerald-500",
+            "tagline": "🎖️ С 23 Февраля!",
+            "is_system": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+    ]
+    await db.themes.insert_many(themes)
     
     # Demo top-up codes
     topup_codes = [
@@ -2736,3 +2806,45 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+# ==================== THEMES API ====================
+
+@api_router.get("/themes")
+async def get_themes():
+    """Get all available themes"""
+    themes = await db.themes.find({}, {"_id": 0}).to_list(100)
+    return themes
+
+@api_router.post("/admin/themes")
+async def create_theme(data: ShopThemeCreate, user: User = Depends(require_admin)):
+    """Admin creates a new theme"""
+    theme = ShopTheme(
+        name=data.name,
+        icon=data.icon,
+        hero_image=data.hero_image,
+        gradient=data.gradient,
+        title_color=data.title_color,
+        tagline=data.tagline,
+        is_system=False
+    )
+    theme_dict = theme.model_dump()
+    theme_dict["created_at"] = theme_dict["created_at"].isoformat()
+    await db.themes.insert_one(theme_dict)
+    theme_dict.pop("_id", None)
+    return theme_dict
+
+@api_router.delete("/admin/themes/{theme_id}")
+async def delete_theme(theme_id: str, user: User = Depends(require_admin)):
+    """Admin deletes a theme"""
+    theme = await db.themes.find_one({"theme_id": theme_id})
+    if not theme:
+        raise HTTPException(status_code=404, detail="Тема не найдена")
+    
+    if theme.get("is_system"):
+        raise HTTPException(status_code=400, detail="Системные темы нельзя удалять")
+        
+    await db.themes.delete_one({"theme_id": theme_id})
+    return {"message": "Тема удалена"}
+
+# Add the router to the app if not already added
+# (It's already added in the original code as api_router)
