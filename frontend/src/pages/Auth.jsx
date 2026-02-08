@@ -14,7 +14,7 @@ const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/ar
 export const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, register, isAuthenticated } = useAuth();
+  const { login, register, isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
   
   const [mode, setMode] = useState(searchParams.get('mode') === 'register' ? 'register' : 'login');
@@ -31,10 +31,14 @@ export const Auth = () => {
   const [registerConfirm, setRegisterConfirm] = useState('');
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/profile');
+    if (isAuthenticated && user) {
+      if (user.role === 'delivery' && !user.is_admin) {
+        navigate('/delivery');
+      } else {
+        navigate('/profile');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -45,9 +49,13 @@ export const Auth = () => {
     
     setLoading(true);
     try {
-      await login(loginEmail, loginPassword);
+      const userData = await login(loginEmail, loginPassword);
       toast.success(t('auth.welcomeBack'));
-      navigate('/profile');
+      if (userData.role === 'delivery' && !userData.is_admin) {
+        navigate('/delivery');
+      } else {
+        navigate('/profile');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || t('auth.loginFailed'));
     } finally {
@@ -74,9 +82,13 @@ export const Auth = () => {
     
     setLoading(true);
     try {
-      await register(registerEmail, registerPassword, registerName);
+      const userData = await register(registerEmail, registerPassword, registerName);
       toast.success(t('auth.accountCreated'));
-      navigate('/profile');
+      if (userData.role === 'delivery' && !userData.is_admin) {
+        navigate('/delivery');
+      } else {
+        navigate('/profile');
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || t('auth.registerFailed'));
     } finally {
@@ -266,9 +278,13 @@ export const AuthCallback = () => {
       if (sessionIdMatch) {
         const sessionId = sessionIdMatch[1];
         try {
-          await processGoogleAuth(sessionId);
+          const userData = await processGoogleAuth(sessionId);
           toast.success(t('auth.welcomeBack'));
-          navigate('/profile', { replace: true });
+          if (userData.role === 'delivery' && !userData.is_admin) {
+            navigate('/delivery', { replace: true });
+          } else {
+            navigate('/profile', { replace: true });
+          }
         } catch (error) {
           toast.error(t('auth.loginFailed'));
           navigate('/auth', { replace: true });
