@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Fixed: Using your actual backend URL on Render
-const BACKEND_URL = 'https://tsmarket0001.onrender.com';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001'; // Default to localhost for development
 const API = `${BACKEND_URL}/api`;
 
 // Create axios instance with credentials
