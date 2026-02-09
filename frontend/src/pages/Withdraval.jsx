@@ -15,6 +15,7 @@ export const Withdrawal = () => {
   
   const [amount, setAmount] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [cardType, setCardType] = useState('');
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
 
@@ -54,15 +55,22 @@ export const Withdrawal = () => {
       return;
     }
 
+    if (!cardType) {
+      toast.error(language === 'ru' ? 'Укажите банк или тип карты' : 'Бонк ё навъи кортро нишон диҳед');
+      return;
+    }
+
     setLoading(true);
     try {
       await withdrawalAPI.createRequest({
         amount: withdrawalAmount,
         card_number: cardNumber,
+        card_type: cardType,
       });
       toast.success(language === 'ru' ? 'Заявка отправлена! Обработка в течение часа.' : 'Дархост фиристода шуд! Коркард дар давоми як соат.');
       setAmount('');
       setCardNumber('');
+      setCardType('');
       await fetchData();
       await refreshUser();
     } catch (error) {
@@ -155,6 +163,22 @@ export const Withdrawal = () => {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-bold ml-1">
+                {language === 'ru' ? 'Название банка / Тип карты' : 'Номи бонк / Навъи корт'}
+              </label>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder={language === 'ru' ? 'Например: Душанбе Сити, Алиф' : 'Мисол: Душанбе Сити, Алиф'}
+                  value={cardType}
+                  onChange={(e) => setCardType(e.target.value)}
+                  className="pl-10 h-14 text-lg font-bold rounded-2xl"
+                />
+                <AlertCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              </div>
+            </div>
+
             <div className="p-4 bg-primary/5 rounded-xl flex gap-3 items-start">
               <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground">
@@ -193,7 +217,7 @@ export const Withdrawal = () => {
                     <div>
                       <p className="font-bold">{req.amount} {t('common.coins')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(req.created_at).toLocaleString()} • {req.card_number.slice(-4).padStart(16, '*')}
+                        {new Date(req.created_at).toLocaleString()} • {req.card_type || 'Card'} ({req.card_number.slice(-4).padStart(16, '*')})
                       </p>
                     </div>
                   </div>
