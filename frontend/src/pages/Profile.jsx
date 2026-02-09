@@ -5,7 +5,7 @@ import { Progress } from '../components/ui/progress';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ordersAPI } from '../lib/api';
-import { Wallet, Sparkles, Gift, ShoppingBag, Calendar, Trophy, Settings, Truck, Eye, Clock, CheckCircle, Package, MapPin, XCircle } from 'lucide-react';
+import { Wallet, Sparkles, Gift, ShoppingBag, Calendar, Trophy, Settings, Truck, Eye, Clock, CheckCircle, Package, MapPin, XCircle, CreditCard } from 'lucide-react';
 
 export const Profile = () => {
   const navigate = useNavigate();
@@ -124,6 +124,10 @@ export const Profile = () => {
           <Link to="/topup" className="tsmarket-card p-4 text-center hover:border-primary/50 transition-colors" data-testid="quick-topup">
             <Wallet className="w-8 h-8 text-primary mx-auto mb-2" />
             <p className="font-bold">{t('profile.topUp')}</p>
+          </Link>
+          <Link to="/withdrawal" className="tsmarket-card p-4 text-center hover:border-primary/50 transition-colors" data-testid="quick-withdrawal">
+            <CreditCard className="w-8 h-8 text-primary mx-auto mb-2" />
+            <p className="font-bold">{lang === 'ru' ? 'Вывод' : 'Баровардан'}</p>
           </Link>
           <Link to="/rewards" className="tsmarket-card p-4 text-center hover:border-primary/50 transition-colors" data-testid="quick-rewards">
             <Gift className="w-8 h-8 text-primary mx-auto mb-2" />
