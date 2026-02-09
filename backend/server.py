@@ -25,7 +25,6 @@ import asyncio
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 # AI Integration
 try:
     from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
@@ -36,7 +35,6 @@ except ImportError:
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
-
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 if not mongo_url:
