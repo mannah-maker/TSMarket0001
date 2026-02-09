@@ -281,6 +281,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_origins=[
         "https://ts-market0001-oek6.vercel.app",
+        "https://ts-market0001.vercel.app", # Основной домен Vercel (если есть)
         "http://localhost:3000",
     ],
     allow_origin_regex=r"https://ts-market0001-.*\.vercel\.app",
