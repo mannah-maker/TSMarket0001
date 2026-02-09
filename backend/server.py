@@ -143,6 +143,8 @@ async def send_verification_email(email: str, code: str):
         return True
     except Exception as e:
         logging.error(f"Failed to send email: {str(e)}")
+        # DEBUG: Print code to logs so user can register without working SMTP
+        logging.info(f"DEBUG: Verification code for {email} is: {code}")
         return False
 
 # AI Receipt Analysis Function
@@ -279,11 +281,7 @@ app = FastAPI(title="TSMarket API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[
-        "https://ts-market0001-oek6.vercel.app",
-        "https://ts-market0001.vercel.app", # Основной домен Vercel (если есть)
-        "http://localhost:3000",
-    ],
+    allow_origins=["https://ts-market0001-oek6.vercel.app", "https://ts-market0001.vercel.app", "http://localhost:3000"],
     allow_origin_regex=r"https://ts-market0001-.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
