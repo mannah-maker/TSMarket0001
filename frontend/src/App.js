@@ -13,7 +13,7 @@ import { Auth, AuthCallback } from './pages/Auth';
 import { Cart } from './pages/Cart';
 import { Profile } from './pages/Profile';
 import { TopUp } from './pages/TopUp';
-import { Withdrawal } from './pages/Withdrawal';
+import { Withdrawal } from './pages/Withdraval';
 import { Rewards } from './pages/Rewards';
 import { Admin } from './pages/Admin';
 import { Helper } from './pages/Helper';
