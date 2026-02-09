@@ -29,7 +29,7 @@ export const Navbar = () => {
 
   const isDelivery = user?.role === 'delivery' && !isAdmin;
 
-  const navLinks = isDelivery ? [] : [
+  const navLinks = [
     { to: '/', label: t('nav.home') },
     { to: '/catalog', label: t('nav.catalog') },
   ];
@@ -40,7 +40,7 @@ export const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to={isDelivery ? "/delivery" : "/"} className="flex items-center gap-3" data-testid="logo-link">
+            <Link to="/" className="flex items-center gap-3" data-testid="logo-link">
               <img src={LOGO_URL} alt="TSMarket" className="h-10 w-10 rounded-full object-cover" loading="eager" />
               <span className="font-bold text-xl tracking-tight hidden sm:block">
                 {t('common.storeName')}
@@ -54,7 +54,7 @@ export const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
-              {isAuthenticated && !isDelivery && (
+              {isAuthenticated && (
                 <>
                   <Link to="/rewards" className="nav-link" data-testid="nav-rewards">
                     {t('nav.rewards')}
@@ -64,14 +64,12 @@ export const Navbar = () => {
                   </Link>
                 </>
               )}
-              {!isDelivery && (
-                <Link to="/support" className="nav-link" data-testid="nav-support">
-                  {lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}
-                </Link>
-              )}
+              <Link to="/support" className="nav-link" data-testid="nav-support">
+                {lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}
+              </Link>
               {isDelivery && (
                 <Link to="/delivery" className="nav-link text-green-600 font-bold" data-testid="nav-delivery">
-                  {lang === 'ru' ? 'Заказы' : 'Фармоишҳо'}
+                  {lang === 'ru' ? 'Панель доставки' : 'Панели расонидан'}
                 </Link>
               )}
             </div>
@@ -90,7 +88,7 @@ export const Navbar = () => {
                 {lang === 'ru' ? 'TJ' : 'RU'}
               </Button>
 
-              {isAuthenticated && !isDelivery && (
+              {isAuthenticated && (
                 <>
                   {/* Balance Display */}
                   <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted rounded-full" data-testid="balance-display">
@@ -128,41 +126,35 @@ export const Navbar = () => {
                     <div className="px-3 py-2">
                       <p className="font-bold truncate">{user?.name}</p>
                       <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-                      {!isDelivery && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="level-badge w-8 h-8 text-xs">
-                            {user?.level || 1}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs text-muted-foreground">{t('common.level')} {user?.level || 1}</p>
-                            <p className="text-xs font-bold">{user?.xp || 0} XP</p>
-                          </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="level-badge w-8 h-8 text-xs">
+                          {user?.level || 1}
                         </div>
-                      )}
+                        <div className="flex-1">
+                          <p className="text-xs text-muted-foreground">{t('common.level')} {user?.level || 1}</p>
+                          <p className="text-xs font-bold">{user?.xp || 0} XP</p>
+                        </div>
+                      </div>
                     </div>
                     <DropdownMenuSeparator />
-                    {!isDelivery && (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link to="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="profile-link">
-                            <User className="w-4 h-4" />
-                            {t('nav.profile')}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/topup" className="flex items-center gap-2 cursor-pointer" data-testid="topup-link">
-                            <Wallet className="w-4 h-4" />
-                            {t('nav.topup')}
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/rewards" className="flex items-center gap-2 cursor-pointer" data-testid="rewards-link">
-                            <Gift className="w-4 h-4" />
-                            {t('nav.rewards')}
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    )}
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="profile-link">
+                        <User className="w-4 h-4" />
+                        {t('nav.profile')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/topup" className="flex items-center gap-2 cursor-pointer" data-testid="topup-link">
+                        <Wallet className="w-4 h-4" />
+                        {t('nav.topup')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/rewards" className="flex items-center gap-2 cursor-pointer" data-testid="rewards-link">
+                        <Gift className="w-4 h-4" />
+                        {t('nav.rewards')}
+                      </Link>
+                    </DropdownMenuItem>
                     {isAdmin && (
                       <>
                         <DropdownMenuSeparator />
@@ -191,7 +183,7 @@ export const Navbar = () => {
                         <DropdownMenuItem asChild>
                           <Link to="/delivery" className="flex items-center gap-2 cursor-pointer text-green-400" data-testid="delivery-link">
                             <Truck className="w-4 h-4" />
-                            {lang === 'ru' ? 'Панель доставщика' : 'Панели расонанда'}
+                            {lang === 'ru' ? 'Панель доставки' : 'Панели расонидан'}
                           </Link>
                         </DropdownMenuItem>
                       </>
@@ -250,17 +242,15 @@ export const Navbar = () => {
               {link.label}
             </Link>
           ))}
-          {!isDelivery && (
-            <Link to="/support" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
-              {lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}
-            </Link>
-          )}
+          <Link to="/support" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+            {lang === 'ru' ? 'Поддержка' : 'Дастгирӣ'}
+          </Link>
           {isDelivery && (
             <Link to="/delivery" className="mobile-menu-link text-green-400" onClick={() => setMobileMenuOpen(false)}>
-              {lang === 'ru' ? 'Заказы' : 'Фармоишҳо'}
+              {lang === 'ru' ? 'Панель доставки' : 'Панели расонидан'}
             </Link>
           )}
-          {isAuthenticated && !isDelivery && (
+          {isAuthenticated && (
             <>
               <Link to="/rewards" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
                 {t('nav.rewards')}
