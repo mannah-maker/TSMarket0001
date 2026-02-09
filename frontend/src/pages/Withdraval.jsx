@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { withdrawalAPI } from '../lib/api';
-import { Wallet, Clock, CheckCircle, XCircle, CreditCard, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Wallet, Clock, CheckCircle, XCircle, CreditCard, AlertCircle, ArrowLeft, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Withdrawal = () => {
@@ -13,8 +13,10 @@ export const Withdrawal = () => {
   const { user, isAuthenticated, refreshUser } = useAuth();
   const { t, language } = useLanguage();
   
+  const [method, setMethod] = useState('card'); // 'card' or 'phone'
   const [amount, setAmount] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [cardType, setCardType] = useState('');
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState([]);
@@ -50,26 +52,42 @@ export const Withdrawal = () => {
       return;
     }
     
-    if (!cardNumber || cardNumber.length < 16) {
-      toast.error(language === 'ru' ? 'Введите корректный номер карты' : 'Рақами кортро дуруст ворид кунед');
-      return;
-    }
+    const payload = {
+      amount: withdrawalAmount,
+      method: method,
+    };
 
-    if (!cardType) {
-      toast.error(language === 'ru' ? 'Укажите банк или тип карты' : 'Бонк ё навъи кортро нишон диҳед');
-      return;
+    if (method === 'card') {
+      if (!cardNumber || cardNumber.length < 16) {
+        toast.error(language === 'ru' ? 'Введите корректный номер карты' : 'Рақами кортро дуруст ворид кунед');
+        return;
+      }
+      if (!cardType) {
+        toast.error(language === 'ru' ? 'Укажите банк или тип карты' : 'Бонк ё навъи кортро нишон диҳед');
+        return;
+      }
+      payload.card_number = cardNumber;
+      payload.card_type = cardType;
+    } else {
+      if (!phoneNumber || phoneNumber.length < 9) {
+        toast.error(language === 'ru' ? 'Введите корректный номер телефона' : 'Рақами телефонро дуруст ворид кунед');
+        return;
+      }
+      if (!cardType) {
+        toast.error(language === 'ru' ? 'Укажите кошелек (например: Алиф, Душанбе Сити)' : 'Ҳамёнро нишон диҳед (мисол: Алиф, Душанбе Сити)');
+        return;
+      }
+      payload.phone_number = phoneNumber;
+      payload.card_type = cardType; // Reusing card_type for wallet name
     }
 
     setLoading(true);
     try {
-      await withdrawalAPI.createRequest({
-        amount: withdrawalAmount,
-        card_number: cardNumber,
-        card_type: cardType,
-      });
+      await withdrawalAPI.createRequest(payload);
       toast.success(language === 'ru' ? 'Заявка отправлена! Обработка в течение часа.' : 'Дархост фиристода шуд! Коркард дар давоми як соат.');
       setAmount('');
       setCardNumber('');
+      setPhoneNumber('');
       setCardType('');
       await fetchData();
       await refreshUser();
@@ -112,7 +130,7 @@ export const Withdrawal = () => {
           {language === 'ru' ? 'Вывод средств' : 'Баровардани маблағ'}
         </h1>
         <p className="text-lg text-muted-foreground mb-8">
-          {language === 'ru' ? 'Оставьте заявку на вывод средств на вашу карту' : 'Барои баровардани маблағ ба корти худ дархост гузоред'}
+          {language === 'ru' ? 'Выберите способ и оставьте заявку на вывод' : 'Усулро интихоб кунед ва барои баровардан дархост гузоред'}
         </p>
 
         {/* Current Balance */}
@@ -128,6 +146,28 @@ export const Withdrawal = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Method Selection */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <button
+            onClick={() => setMethod('card')}
+            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+              method === 'card' ? 'border-primary bg-primary/5' : 'border-border bg-white hover:border-primary/50'
+            }`}
+          >
+            <CreditCard className={`w-6 h-6 ${method === 'card' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="font-bold text-sm">{language === 'ru' ? 'На карту' : 'Ба корт'}</span>
+          </button>
+          <button
+            onClick={() => setMethod('phone')}
+            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+              method === 'phone' ? 'border-primary bg-primary/5' : 'border-border bg-white hover:border-primary/50'
+            }`}
+          >
+            <Phone className={`w-6 h-6 ${method === 'phone' ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="font-bold text-sm">{language === 'ru' ? 'По номеру' : 'Бо рақам'}</span>
+          </button>
         </div>
 
         {/* Withdrawal Form */}
@@ -147,25 +187,45 @@ export const Withdrawal = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold ml-1">
-                {language === 'ru' ? 'Номер карты' : 'Рақами корт'}
-              </label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="0000 0000 0000 0000"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                  className="pl-10 h-14 text-xl font-bold rounded-2xl"
-                />
-                <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            {method === 'card' ? (
+              <div className="space-y-2">
+                <label className="text-sm font-bold ml-1">
+                  {language === 'ru' ? 'Номер карты' : 'Рақами корт'}
+                </label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="0000 0000 0000 0000"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
+                    className="pl-10 h-14 text-xl font-bold rounded-2xl"
+                  />
+                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm font-bold ml-1">
+                  {language === 'ru' ? 'Номер телефона' : 'Рақами телефон'}
+                </label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="900 00 00 00"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                    className="pl-10 h-14 text-xl font-bold rounded-2xl"
+                  />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-bold ml-1">
-                {language === 'ru' ? 'Название банка / Тип карты' : 'Номи бонк / Навъи корт'}
+                {method === 'card' 
+                  ? (language === 'ru' ? 'Название банка / Тип карты' : 'Номи бонк / Навъи корт')
+                  : (language === 'ru' ? 'Название кошелька' : 'Номи ҳамён')}
               </label>
               <div className="relative">
                 <Input
@@ -183,8 +243,8 @@ export const Withdrawal = () => {
               <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground">
                 {language === 'ru' 
-                  ? 'Заявки обрабатываются в течение часа. Пожалуйста, убедитесь, что номер карты указан верно.' 
-                  : 'Дархостҳо дар давоми як соат коркард мешаванд. Лутфан боварӣ ҳосил кунед, ки рақами корт дуруст нишон дода шудааст.'}
+                  ? 'Заявки обрабатываются в течение часа. Пожалуйста, убедитесь, что данные указаны верно.' 
+                  : 'Дархостҳо дар давоми як соат коркард мешаванд. Лутфан боварӣ ҳосил кунед, ки маълумот дуруст нишон дода шудааст.'}
               </p>
             </div>
 
@@ -217,7 +277,7 @@ export const Withdrawal = () => {
                     <div>
                       <p className="font-bold">{req.amount} {t('common.coins')}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(req.created_at).toLocaleString()} • {req.card_type || 'Card'} ({req.card_number.slice(-4).padStart(16, '*')})
+                        {new Date(req.created_at).toLocaleString()} • {req.card_type || 'Wallet'} ({req.card_number ? req.card_number.slice(-4).padStart(16, '*') : req.phone_number})
                       </p>
                     </div>
                   </div>
