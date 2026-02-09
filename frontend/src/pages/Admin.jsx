@@ -26,6 +26,7 @@ export const Admin = () => {
   const [categories, setCategories] = useState([]);
   const [topupCodes, setTopupCodes] = useState([]);
   const [topupRequests, setTopupRequests] = useState([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState([]);
   const [rewards, setRewards] = useState([]);
   const [wheelPrizes, setWheelPrizes] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -111,6 +112,7 @@ export const Admin = () => {
         adminAPI.getOrders(),
         wheelAPI.getPrizes(),
         adminAPI.getTopupRequests(),
+        adminAPI.getWithdrawalRequests(),
         adminAPI.getPromoCodes(),
         adminAPI.getTags(),
       ]);
@@ -165,6 +167,7 @@ export const Admin = () => {
       setWheelPrizes(prizesRes.data);
       setAdminSettings(settingsData);
       setTopupRequests(requestsRes.data);
+      setWithdrawalRequests(arguments[1].data);
       setPromoCodes(promoRes.data);
       setTags(tagsRes.data);
       setMissions(missionsData);
@@ -300,6 +303,29 @@ export const Admin = () => {
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to reject');
+    }
+  };
+
+  const handleApproveWithdrawal = async (id) => {
+    if (!window.confirm('Одобрить вывод средств?')) return;
+    try {
+      await adminAPI.approveWithdrawalRequest(id);
+      toast.success('Вывод одобрен');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка одобрения вывода');
+    }
+  };
+
+  const handleRejectWithdrawal = async (id) => {
+    const note = window.prompt('Причина отклонения:', 'Неверные данные карты');
+    if (note === null) return;
+    try {
+      await adminAPI.rejectWithdrawalRequest(id, note);
+      toast.success('Вывод отклонен, средства возвращены пользователю');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка отклонения вывода');
     }
   };
 
@@ -800,6 +826,7 @@ export const Admin = () => {
   };
 
   const pendingRequests = topupRequests.filter(r => r.status === 'pending');
+  const pendingWithdrawals = withdrawalRequests.filter(r => r.status === 'pending');
   const openTickets = supportTickets.filter(t => t.status === 'open');
 
   // Check if user is admin or helper
@@ -947,6 +974,14 @@ export const Admin = () => {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="withdrawals" className="relative" data-testid="tab-withdrawals">
+              Выводы
+              {pendingWithdrawals.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center justify-center">
+                  {pendingWithdrawals.length}
+                </span>
+              )}
+            </TabsTrigger>
             {isAdmin && <TabsTrigger value="settings" data-testid="tab-settings">{t('admin.settings')}</TabsTrigger>}
             <TabsTrigger value="discounts" data-testid="tab-discounts">Скидки</TabsTrigger>
             <TabsTrigger value="missions" data-testid="tab-missions">
@@ -1057,6 +1092,70 @@ export const Admin = () => {
           </TabsContent>
 
           {/* Settings Tab */}
+          <TabsContent value="withdrawals" className="space-y-6">
+            <div className="admin-card">
+              <h3 className="font-bold mb-6 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                Заявки на вывод средств
+              </h3>
+              <div className="space-y-4">
+                {withdrawalRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700">
+                    <CreditCard className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-400">Заявок на вывод пока нет</p>
+                  </div>
+                ) : (
+                  withdrawalRequests.map((req) => (
+                    <div key={req.request_id} className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition-all">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl font-black text-primary">{req.amount}</span>
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                              req.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                              req.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                              'bg-red-500/20 text-red-400'
+                            }`}>
+                              {req.status === 'pending' ? 'Ожидает' : req.status === 'approved' ? 'Выполнено' : 'Отклонено'}
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-slate-200">Карта: {req.card_number}</p>
+                          <p className="text-sm"><span className="text-slate-400">User:</span> {req.user_name} ({req.user_email})</p>
+                          <p className="text-xs text-slate-400 mt-1">{new Date(req.created_at).toLocaleString()}</p>
+                        </div>
+                        
+                        {req.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={() => handleApproveWithdrawal(req.request_id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Одобрить
+                            </Button>
+                            <Button 
+                              variant="destructive"
+                              onClick={() => handleRejectWithdrawal(req.request_id)}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Отклонить
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {req.admin_note && (
+                        <p className="text-sm text-slate-400 mt-2 p-2 bg-slate-900/50 rounded-lg border border-slate-700">
+                          Примечание: {req.admin_note}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="settings" className="space-y-6">
             <div className="admin-card" data-testid="card-settings">
               <h3 className="font-bold mb-4 flex items-center gap-2">
