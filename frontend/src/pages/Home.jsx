@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { productsAPI, categoriesAPI, supportAPI } from '../lib/api';
+import { productsAPI, categoriesAPI, supportAPI, adminAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
