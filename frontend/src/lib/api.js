@@ -80,6 +80,12 @@ export const topupAPI = {
   getRequests: () => api.get('/topup/requests'),
 };
 
+// Withdrawal API
+export const withdrawalAPI = {
+  createRequest: (data) => api.post('/withdrawal/request', data),
+  getRequests: () => api.get('/withdrawal/requests'),
+};
+
 // Rewards API
 export const rewardsAPI = {
   getAll: () => api.get('/rewards'),
@@ -111,6 +117,9 @@ export const adminAPI = {
   getTopupRequests: () => api.get('/admin/topup-requests'),
   approveTopupRequest: (id) => api.put(`/admin/topup-requests/${id}/approve`),
   rejectTopupRequest: (id, note) => api.put(`/admin/topup-requests/${id}/reject`, null, { params: { note } }),
+  getWithdrawalRequests: () => api.get('/admin/withdrawal-requests'),
+  approveWithdrawalRequest: (id) => api.put(`/admin/withdrawal-requests/${id}/approve`),
+  rejectWithdrawalRequest: (id, note) => api.put(`/admin/withdrawal-requests/${id}/reject`, null, { params: { note } }),
   createReward: (data) => api.post('/admin/rewards', data),
   updateReward: (id, data) => api.put(`/admin/rewards/${id}`, data),
   deleteReward: (id) => api.delete(`/admin/rewards/${id}`),
