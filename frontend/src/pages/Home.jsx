@@ -9,13 +9,13 @@ import { ShoppingCart, Sparkles, Trophy, Gift, ArrowRight, Zap } from 'lucide-re
 import { toast } from 'sonner';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
-const HERO_IMAGE = "https://images.unsplash.com/photo-1636036769389-343bb250f013?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxnYW1pbmclMjBzZXR1cCUyMHBlcmlwaGVyYWxzJTIwaGVhZHBob25lcyUyMGtleWJvYXJkJTIwbW91c2UlMjBuZW9uJTIwbGlnaHR8ZW58MHx8fHwxNzY3MjM5NjczfDA&ixlib=rb-4.1.0&q=85";
+const HERO_IMAGE = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop";
 
 const DEFAULT_THEME = {
   hero: HERO_IMAGE,
   gradient: 'tsmarket-gradient',
   titleColor: 'text-teal-500',
-  tagline: '🛒 Обычный стиль'
+  tagline: '🛒 Лучший выбор товаров'
 };
 
 const getLocalizedText = (item, field, lang) => {
@@ -72,7 +72,11 @@ export const Home = () => {
         const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
         const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
         
-        setProducts(productsData.slice(0, 4));
+        // Filter popular products (e.g., those with higher XP or just take first 8)
+        const popularProducts = productsData
+          .sort((a, b) => (b.xp_reward || 0) - (a.xp_reward || 0))
+          .slice(0, 8);
+        setProducts(popularProducts);
         setCategories(categoriesData);
 
         try {
@@ -243,7 +247,7 @@ export const Home = () => {
 
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(8)].map((_, i) => (
                 <div key={i} className="skeleton h-80 rounded-2xl" />
               ))}
             </div>
