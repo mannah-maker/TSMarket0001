@@ -532,6 +532,24 @@ class TopUpRequestCreate(BaseModel):
     amount: float
     receipt_url: str
 
+# Withdrawal Request model
+class WithdrawalRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    request_id: str = Field(default_factory=lambda: f"wdr_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    user_name: str
+    user_email: str
+    amount: float
+    card_number: str
+    status: str = "pending"  # pending, approved, rejected
+    admin_note: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    processed_at: Optional[datetime] = None
+
+class WithdrawalRequestCreate(BaseModel):
+    amount: float
+    card_number: str
+
 class ShopTheme(BaseModel):
     model_config = ConfigDict(extra="ignore")
     theme_id: str = Field(default_factory=lambda: f"theme_{uuid.uuid4().hex[:12]}")
@@ -1537,6 +1555,59 @@ async def get_topup_history(user: User = Depends(require_user)):
     history = await db.topup_history.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return history
 
+# ==================== WITHDRAWAL ENDPOINTS ====================
+
+@api_router.post("/withdrawal/request")
+async def create_withdrawal_request(data: WithdrawalRequestCreate, user: User = Depends(require_user)):
+    """Create a new withdrawal request"""
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Сумма должна быть больше нуля")
+    
+    # Check if user has enough balance
+    if user.balance < data.amount:
+        raise HTTPException(status_code=400, detail="Недостаточно средств на балансе")
+    
+    # Create request
+    request_data = {
+        "request_id": f"wdr_{uuid.uuid4().hex[:12]}",
+        "user_id": user.user_id,
+        "user_name": user.name,
+        "user_email": user.email,
+        "amount": data.amount,
+        "card_number": data.card_number,
+        "status": "pending",
+        "admin_note": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None
+    }
+    
+    # Deduct balance immediately to prevent double spending
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$inc": {"balance": -data.amount}}
+    )
+    
+    # Log history
+    history_entry = {
+        "history_id": f"hist_{uuid.uuid4().hex[:12]}",
+        "user_id": user.user_id,
+        "amount": -data.amount,
+        "type": "withdrawal_request",
+        "description": f"Заявка на вывод средств: {data.amount} на карту {data.card_number}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.topup_history.insert_one(history_entry)
+    
+    await db.withdrawal_requests.insert_one(request_data)
+    request_data.pop("_id", None)
+    return request_data
+
+@api_router.get("/withdrawal/requests")
+async def get_user_withdrawal_requests(user: User = Depends(require_user)):
+    """Get user's withdrawal requests"""
+    requests = await db.withdrawal_requests.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return requests
+
 # ==================== REWARDS ENDPOINTS ====================
 
 @api_router.get("/rewards")
@@ -1845,6 +1916,75 @@ async def get_support_contacts():
 async def get_all_topup_requests(user: User = Depends(require_helper_or_admin)):
     requests = await db.topup_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return requests
+
+@api_router.get("/admin/withdrawal-requests")
+async def get_all_withdrawal_requests(user: User = Depends(require_helper_or_admin)):
+    """Get all withdrawal requests for admin"""
+    requests = await db.withdrawal_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return requests
+
+@api_router.put("/admin/withdrawal-requests/{request_id}/approve")
+async def approve_withdrawal_request(request_id: str, user: User = Depends(require_helper_or_admin)):
+    """Approve a withdrawal request"""
+    request = await db.withdrawal_requests.find_one({"request_id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Заявка уже обработана")
+    
+    await db.withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": "approved",
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_note": f"Одобрено администратором {user.email}"
+            }
+        }
+    )
+    
+    return {"message": "Заявка одобрена"}
+
+@api_router.put("/admin/withdrawal-requests/{request_id}/reject")
+async def reject_withdrawal_request(request_id: str, note: str = "Отклонено администратором", user: User = Depends(require_helper_or_admin)):
+    """Reject a withdrawal request and refund balance"""
+    request = await db.withdrawal_requests.find_one({"request_id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Заявка уже обработана")
+    
+    # Refund balance
+    await db.users.update_one(
+        {"user_id": request["user_id"]},
+        {"$inc": {"balance": request["amount"]}}
+    )
+    
+    # Log history
+    history_entry = {
+        "history_id": f"hist_{uuid.uuid4().hex[:12]}",
+        "user_id": request["user_id"],
+        "amount": request["amount"],
+        "type": "withdrawal_rejected",
+        "description": f"Возврат средств: заявка на вывод {request['amount']} отклонена. Причина: {note}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.topup_history.insert_one(history_entry)
+    
+    await db.withdrawal_requests.update_one(
+        {"request_id": request_id},
+        {
+            "$set": {
+                "status": "rejected",
+                "processed_at": datetime.now(timezone.utc).isoformat(),
+                "admin_note": note
+            }
+        }
+    )
+    
+    return {"message": "Заявка отклонена, средства возвращены на баланс"}
 
 @api_router.put("/admin/topup-requests/{request_id}/approve")
 async def approve_topup_request(request_id: str, user: User = Depends(require_helper_or_admin)):
