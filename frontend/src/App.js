@@ -13,7 +13,7 @@ import { Auth, AuthCallback } from './pages/Auth';
 import { Cart } from './pages/Cart';
 import { Profile } from './pages/Profile';
 import { TopUp } from './pages/TopUp';
-// import { Withdrawal } from './pages/Withdrawal';
+import { Withdrawal } from './pages/Withdrawal';
 import { Rewards } from './pages/Rewards';
 import { Admin } from './pages/Admin';
 import { Helper } from './pages/Helper';
@@ -74,7 +74,7 @@ const AppRouter = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/topup" element={<TopUp />} />
-          {/* <Route path="/withdrawal" element={<Withdrawal />} /> */}
+          <Route path="/withdrawal" element={<Withdrawal />} />
           <Route path="/rewards" element={<Rewards />} />
           <Route path="/missions" element={<Missions />} />
           <Route path="/support" element={<Support />} />
