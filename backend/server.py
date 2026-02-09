@@ -279,9 +279,13 @@ app = FastAPI(title="TSMarket API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["https://ts-market0001-oek6.vercel.app", "https://ts-market0001-yilv.vercel.app"],
+    allow_origins=[
+        os.getenv("FRONTEND_URL", "http://localhost:3000"), # Frontend URL from environment variable
+        "https://ts-market0001-oek6.vercel.app", # Existing Vercel preview URLs
+        "https://ts-market0001-yilv.vercel.app"
+    ],
     # Это разрешит любые preview-ссылки от Vercel для вашего проекта
-    allow_origin_regex=r"https://ts-market0001-yilv-.*\.vercel\.app",
+    allow_origin_regex=os.getenv("FRONTEND_URL_REGEX", r"https://ts-market0001-.*\.vercel\.app"), # Regex for Vercel preview deployments
     allow_methods=["*"],
     allow_headers=["*"],
 )
