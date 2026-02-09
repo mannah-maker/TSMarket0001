@@ -25,6 +25,7 @@ import asyncio
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 # AI Integration
 try:
     from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
@@ -35,6 +36,7 @@ except ImportError:
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
 # MongoDB connection
 mongo_url = os.getenv("MONGO_URL")
 if not mongo_url:
@@ -278,12 +280,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=[
-        os.getenv("FRONTEND_URL", "http://localhost:3000"), # Frontend URL from environment variable
-        "https://ts-market0001-oek6.vercel.app", # Existing Vercel preview URLs
-        "https://ts-market0001-yilv.vercel.app"
+        "https://ts-market0001-oek6.vercel.app",
+        "http://localhost:3000",
     ],
-    # Это разрешит любые preview-ссылки от Vercel для вашего проекта
-    allow_origin_regex=os.getenv("FRONTEND_URL_REGEX", r"https://ts-market0001-.*\.vercel\.app"), # Regex for Vercel preview deployments
+    allow_origin_regex=r"https://ts-market0001-.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
