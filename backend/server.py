@@ -826,6 +826,13 @@ async def require_delivery_or_admin(request: Request) -> User:
         raise HTTPException(status_code=403, detail="Delivery or admin access required")
     return user
 
+async def require_staff(request: Request) -> User:
+    """Require helper, delivery or admin role"""
+    user = await require_user(request)
+    if user.role not in ["helper", "delivery", "admin"] and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Staff access required")
+    return user
+
 # ==================== AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register")
@@ -2006,13 +2013,13 @@ async def update_wheel_prize(prize_id: str, data: WheelPrizeCreate, user: User =
     return {"message": "Prize updated"}
 
 @api_router.get("/admin/orders")
-async def get_all_orders(user: User = Depends(require_helper_or_admin)):
+async def get_all_orders(user: User = Depends(require_staff)):
     """Helper and admin can view orders"""
     orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return orders
 
 @api_router.get("/admin/orders/{order_id}")
-async def get_order_details(order_id: str, user: User = Depends(require_helper_or_admin)):
+async def get_order_details(order_id: str, user: User = Depends(require_staff)):
     """Get detailed order info including user details"""
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if not order:
@@ -2025,7 +2032,7 @@ async def get_order_details(order_id: str, user: User = Depends(require_helper_o
     return order
 
 @api_router.put("/admin/orders/{order_id}/status")
-async def update_order_status(order_id: str, data: OrderStatusUpdate, user: User = Depends(require_helper_or_admin)):
+async def update_order_status(order_id: str, data: OrderStatusUpdate, user: User = Depends(require_staff)):
     """Update order status with tracking"""
     valid_statuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]
     if data.status not in valid_statuses:
