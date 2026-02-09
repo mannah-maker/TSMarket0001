@@ -193,6 +193,7 @@ export const Auth = () => {
             {/* Register Form */}
             <TabsContent value="register">
               {showVerification ? (
+                <>
                 <form onSubmit={handleVerify} className="space-y-4">
                   <div className="text-center mb-4">
                     <p className="text-sm text-muted-foreground">{t('auth.codeSent')}:</p>
@@ -230,7 +231,9 @@ export const Auth = () => {
                     {t('product.back')}
                   </Button>
                 </form>
+                </>
               ) : (
+                <>
                 <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <Label htmlFor="register-name">{t('auth.name')}</Label>
@@ -305,6 +308,8 @@ export const Auth = () => {
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('auth.createAccount')}
                 </Button>
               </form>
+              </>
+              )}
             </TabsContent>
           </Tabs>
 
