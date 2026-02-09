@@ -42,11 +42,6 @@ const NonDeliveryRoute = ({ children }) => {
   
   if (loading) return null;
   
-  // Delivery drivers should ONLY access /delivery
-  if (isAuthenticated && user?.role === 'delivery' && !user?.is_admin) {
-    return <Navigate to="/delivery" />;
-  }
-  
   return children;
 };
 
@@ -59,28 +54,28 @@ const AppRouter = () => {
     return <AuthCallback />;
   }
 
-  // Check if on admin/delivery page to hide navbar/footer
-  const isAdminPage = location.pathname === '/admin' || location.pathname === '/helper' || location.pathname === '/delivery';
+  // Check if on admin/helper page to hide navbar/footer (delivery can see navbar)
+  const isAdminPage = location.pathname === '/admin' || location.pathname === '/helper';
   
-  // For delivery drivers, we always want to show the delivery panel layout if they are on /delivery
-  const isDeliveryUser = user?.role === 'delivery' && !user?.is_admin;
+  // Delivery users can now access the shop like regular users
+  const isDeliveryUser = false;
 
   return (
     <>
       {!isAdminPage && <Navbar />}
       <main className={isAdminPage ? '' : 'min-h-screen'}>
         <Routes>
-          <Route path="/" element={<NonDeliveryRoute><Home /></NonDeliveryRoute>} />
-          <Route path="/catalog" element={<NonDeliveryRoute><Catalog /></NonDeliveryRoute>} />
-          <Route path="/product/:id" element={<NonDeliveryRoute><ProductDetail /></NonDeliveryRoute>} />
+          <Route path="/" element={<Home />} />
+          <Route path="/catalog" element={<Catalog />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/cart" element={<NonDeliveryRoute><Cart /></NonDeliveryRoute>} />
-          <Route path="/profile" element={<NonDeliveryRoute><Profile /></NonDeliveryRoute>} />
-          <Route path="/topup" element={<NonDeliveryRoute><TopUp /></NonDeliveryRoute>} />
-          <Route path="/rewards" element={<NonDeliveryRoute><Rewards /></NonDeliveryRoute>} />
-          <Route path="/missions" element={<NonDeliveryRoute><Missions /></NonDeliveryRoute>} />
-          <Route path="/support" element={<NonDeliveryRoute><Support /></NonDeliveryRoute>} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/topup" element={<TopUp />} />
+          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/missions" element={<Missions />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/helper" element={<Helper />} />
           <Route path="/delivery" element={<DeliveryRoute><Delivery /></DeliveryRoute>} />
