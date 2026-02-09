@@ -55,12 +55,19 @@ export const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes, settingsRes, themesRes] = await Promise.all([
-          productsAPI.getAll({ limit: 12 }),
-          categoriesAPI.getAll(),
-          supportAPI.getSettings().catch(() => ({ data: { active_theme: 'default' } })),
-          adminAPI.getThemes().catch(() => ({ data: [] }))
-        ]);
+        // Try to fetch data independently to avoid one failure blocking everything
+        const productsRes = await productsAPI.getAll({ limit: 20 }).catch(e => {
+          console.error("Products fetch error:", e);
+          return { data: [] };
+        });
+        
+        const categoriesRes = await categoriesAPI.getAll().catch(e => {
+          console.error("Categories fetch error:", e);
+          return { data: [] };
+        });
+
+        const settingsRes = await supportAPI.getSettings().catch(() => ({ data: { active_theme: 'default' } }));
+        const themesRes = await adminAPI.getThemes().catch(() => ({ data: [] }));
         
         if (settingsRes?.data?.active_theme) {
           setActiveThemeId(settingsRes.data.active_theme);
@@ -69,13 +76,18 @@ export const Home = () => {
           setThemes(themesRes.data);
         }
         
-        const productsData = Array.isArray(productsRes?.data) ? productsRes.data : [];
-        const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : [];
+        const productsData = Array.isArray(productsRes?.data) ? productsRes.data : 
+                            (Array.isArray(productsRes) ? productsRes : []);
+        const categoriesData = Array.isArray(categoriesRes?.data) ? categoriesRes.data : 
+                              (Array.isArray(categoriesRes) ? categoriesRes : []);
         
+        console.log("Fetched products count:", productsData.length);
+
         // Filter popular products (e.g., those with higher XP or just take first 8)
-        const popularProducts = productsData
+        const popularProducts = [...productsData]
           .sort((a, b) => (b.xp_reward || 0) - (a.xp_reward || 0))
           .slice(0, 8);
+          
         setProducts(popularProducts);
         setCategories(categoriesData);
 
