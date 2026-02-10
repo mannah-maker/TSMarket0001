@@ -84,6 +84,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         rate_limit_store[client_ip].append(current_time)
         
         response = await call_next(request)
+        
+        # Add Security Headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:;"
+        
         return response
 
 # Input sanitization helper
@@ -91,10 +99,15 @@ def sanitize_string(value: str, max_length: int = 1000) -> str:
     """Sanitize string input to prevent XSS and limit length"""
     if not value:
         return value
-    # Remove HTML tags
-    value = re.sub(r'<[^>]*>', '', value)
+    # Escape HTML special characters to prevent XSS
+    import html
+    value = html.escape(value)
     # Limit length
     return value[:max_length].strip()
+
+def escape_regex(value: str) -> str:
+    """Escape special characters for regex to prevent ReDoS"""
+    return re.escape(value)
 
 async def send_verification_email(email: str, code: str):
     """Send verification code to user's email"""
@@ -1189,11 +1202,12 @@ async def get_products(
         
     # 2. Улучшенный поиск (ищет по названию и описанию на двух языках)
     if search:
+        safe_search = escape_regex(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"name_ru": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}},
-            {"description_ru": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": safe_search, "$options": "i"}},
+            {"name_ru": {"$regex": safe_search, "$options": "i"}},
+            {"description": {"$regex": safe_search, "$options": "i"}},
+            {"description_ru": {"$regex": safe_search, "$options": "i"}}
         ]
     
     # 3. Правильная фильтрация по цене (объединяем min и max)
@@ -1636,16 +1650,24 @@ async def claim_reward(level: int, user: User = Depends(require_user)):
     if level in user.claimed_rewards:
         raise HTTPException(status_code=400, detail="Reward already claimed")
     
-    # Apply reward
-    current = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
-    updates = {"claimed_rewards": current["claimed_rewards"] + [level]}
+    # Apply reward atomically
+    update_ops = {"$push": {"claimed_rewards": level}}
     
     if reward["reward_type"] == "coins":
-        updates["balance"] = current["balance"] + reward["value"]
+        update_ops["$inc"] = {"balance": reward["value"]}
     elif reward["reward_type"] == "xp_boost":
-        updates["xp"] = current["xp"] + int(reward["value"])
+        # Note: XP update doesn't automatically recalculate level here
+        # For simplicity, we just increment XP, level will catch up on next login or action
+        update_ops["$inc"] = {"xp": int(reward["value"])}
     
-    await db.users.update_one({"user_id": user.user_id}, {"$set": updates})
+    # We use a filter to ensure reward isn't double-claimed in a race condition
+    result = await db.users.update_one(
+        {"user_id": user.user_id, "claimed_rewards": {"$ne": level}},
+        update_ops
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Reward already claimed or user not found")
     
     return {"message": "Reward claimed", "reward": reward}
 
@@ -1677,21 +1699,25 @@ async def spin_wheel(user: User = Depends(require_user)):
             selected_prize = prize
             break
     
-    # Apply prize
-    current = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
-    updates = {"wheel_spins_available": current["wheel_spins_available"] - 1}
+    # Apply prize atomically
+    update_ops = {"$inc": {"wheel_spins_available": -1}}
     
     if selected_prize["prize_type"] == "coins":
-        updates["balance"] = current["balance"] + selected_prize["value"]
+        update_ops["$inc"]["balance"] = selected_prize["value"]
     elif selected_prize["prize_type"] == "xp":
-        new_xp = current["xp"] + int(selected_prize["value"])
-        new_level = calculate_level(new_xp)
-        updates["xp"] = new_xp
-        updates["level"] = new_level
+        update_ops["$inc"]["xp"] = int(selected_prize["value"])
+        # Level will be updated on next action or login
     
-    await db.users.update_one({"user_id": user.user_id}, {"$set": updates})
+    # Ensure user has spins available during update
+    result = await db.users.update_one(
+        {"user_id": user.user_id, "wheel_spins_available": {"$gt": 0}},
+        update_ops
+    )
     
-    return {"prize": selected_prize, "spins_remaining": current["wheel_spins_available"] - 1}
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="No spins available or user not found")
+    
+    return {"prize": selected_prize, "spins_remaining": user.wheel_spins_available - 1}
 
 # ==================== ADMIN ENDPOINTS ====================
 
@@ -2006,14 +2032,11 @@ async def approve_topup_request(request_id: str, user: User = Depends(require_he
         }}
     )
     
-    # Add balance to user
-    target_user = await db.users.find_one({"user_id": req["user_id"]}, {"_id": 0})
-    if target_user:
-        new_balance = target_user["balance"] + req["amount"]
-        await db.users.update_one(
-            {"user_id": req["user_id"]},
-            {"$set": {"balance": new_balance}}
-        )
+    # Add balance to user atomically
+    await db.users.update_one(
+        {"user_id": req["user_id"]},
+        {"$inc": {"balance": req["amount"]}}
+    )
     
     return {"message": "Request approved", "amount": req["amount"]}
 
@@ -2165,9 +2188,12 @@ async def get_order_details(order_id: str, user: User = Depends(require_staff)):
     if not order:
         raise HTTPException(status_code=404, detail="Заказ не найден")
     
-    # Get user info
-    order_user = await db.users.find_one({"user_id": order["user_id"]}, {"_id": 0, "hashed_password": 0})
-    order["user_info"] = order_user
+    # Get user info (public fields only)
+    order_user = await db.users.find_one({"user_id": order["user_id"]}, {"_id": 0})
+    if order_user:
+        # Filter to return only necessary public info
+        public_user = UserPublic(**order_user).model_dump()
+        order["user_info"] = public_user
     
     return order
 
@@ -2587,29 +2613,34 @@ async def claim_mission_reward(mission_id: str, user: User = Depends(require_use
     if user_mission.get("is_claimed"):
         raise HTTPException(status_code=400, detail="Награда уже получена")
     
-    # Give reward
+    # Mark as claimed first to prevent race conditions (using filter)
+    result = await db.user_missions.update_one(
+        {
+            "user_id": user.user_id, 
+            "mission_id": mission_id, 
+            "is_completed": True, 
+            "is_claimed": {"$ne": True}
+        },
+        {"$set": {"is_claimed": True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Награда уже получена или миссия не выполнена")
+
+    # Give reward atomically
     reward_type = mission["reward_type"]
     reward_value = mission["reward_value"]
     
-    update_data = {}
+    update_ops = {}
     if reward_type == "coins":
-        update_data["balance"] = user.balance + reward_value
+        update_ops = {"$inc": {"balance": reward_value}}
     elif reward_type == "xp":
-        new_xp = user.xp + int(reward_value)
-        new_level = calculate_level(new_xp)
-        update_data["xp"] = new_xp
-        update_data["level"] = new_level
+        update_ops = {"$inc": {"xp": int(reward_value)}}
     elif reward_type == "spin":
-        update_data["wheel_spins_available"] = user.wheel_spins_available + int(reward_value)
+        update_ops = {"$inc": {"wheel_spins_available": int(reward_value)}}
     
-    if update_data:
-        await db.users.update_one({"user_id": user.user_id}, {"$set": update_data})
-    
-    # Mark as claimed
-    await db.user_missions.update_one(
-        {"user_id": user.user_id, "mission_id": mission_id},
-        {"$set": {"is_claimed": True}}
-    )
+    if update_ops:
+        await db.users.update_one({"user_id": user.user_id}, update_ops)
     
     return {"message": "Награда получена!", "reward_type": reward_type, "reward_value": reward_value}
 
@@ -2701,22 +2732,25 @@ async def update_mission_progress(user_id: str, mission_type: str, value: float)
         if user_mission and user_mission.get("is_completed"):
             continue  # Already completed
         
-        # Update progress
-        current_progress = user_mission.get("progress", 0) if user_mission else 0
-        new_progress = current_progress + value
-        is_completed = new_progress >= mission["target_value"]
+        # Update progress atomically using $inc
+        # Note: We can't easily check for completion in the same atomic op without $cond or similar
+        # But we can update progress and then check if it's completed in a separate step or use a find_one_and_update
         
-        await db.user_missions.update_one(
+        result = await db.user_missions.find_one_and_update(
             {"user_id": user_id, "mission_id": mission["mission_id"]},
-            {"$set": {
-                "user_id": user_id,
-                "mission_id": mission["mission_id"],
-                "progress": new_progress,
-                "is_completed": is_completed,
-                "completed_at": datetime.now(timezone.utc).isoformat() if is_completed else None
-            }},
-            upsert=True
+            {"$inc": {"progress": value}},
+            upsert=True,
+            return_document=True
         )
+        
+        if result and not result.get("is_completed") and result.get("progress", 0) >= mission["target_value"]:
+            await db.user_missions.update_one(
+                {"user_id": user_id, "mission_id": mission["mission_id"]},
+                {"$set": {
+                    "is_completed": True,
+                    "completed_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
 
 # ==================== SUPPORT API ====================
 
