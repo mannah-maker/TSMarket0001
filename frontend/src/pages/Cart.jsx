@@ -85,6 +85,7 @@ export const Cart = () => {
         product_id: item.product_id,
         quantity: item.quantity,
         size: item.size,
+        color: item.color,
       }));
 
       const res = await ordersAPI.create(orderItems, deliveryAddress.trim(), phoneNumber.trim(), promoValid ? promoCode.trim() : null);
@@ -138,7 +139,7 @@ export const Cart = () => {
             <div className="lg:col-span-2 space-y-4">
               {items.map((item) => (
                 <div
-                  key={`${item.product_id}-${item.size}`}
+                  key={`${item.product_id}-${item.size}-${item.color}`}
                   className="tsmarket-card p-4 flex gap-4"
                   data-testid={`cart-item-${item.product_id}`}
                 >
@@ -158,9 +159,14 @@ export const Cart = () => {
                             {item.product?.name}
                           </h3>
                         </Link>
-                        {item.size && (
-                          <p className="text-sm text-muted-foreground">Size: {item.size}</p>
-                        )}
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          {item.size && (
+                            <p className="text-sm text-muted-foreground">Size: {item.size}</p>
+                          )}
+                          {item.color && (
+                            <p className="text-sm text-muted-foreground">Color: {item.color}</p>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 mt-1">
                           <Sparkles className="w-4 h-4 text-primary" />
                           <span className="text-sm text-primary font-bold">
@@ -173,7 +179,7 @@ export const Cart = () => {
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive/80"
-                        onClick={() => removeItem(item.product_id, item.size)}
+                        onClick={() => removeItem(item.product_id, item.size, item.color)}
                         data-testid={`remove-${item.product_id}`}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -186,7 +192,7 @@ export const Cart = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 rounded-full"
-                          onClick={() => updateQuantity(item.product_id, item.quantity - 1, item.size)}
+                          onClick={() => updateQuantity(item.product_id, item.quantity - 1, item.size, item.color)}
                           data-testid={`qty-minus-${item.product_id}`}
                         >
                           <Minus className="w-3 h-3" />
@@ -196,7 +202,7 @@ export const Cart = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 rounded-full"
-                          onClick={() => updateQuantity(item.product_id, item.quantity + 1, item.size)}
+                          onClick={() => updateQuantity(item.product_id, item.quantity + 1, item.size, item.color)}
                           data-testid={`qty-plus-${item.product_id}`}
                         >
                           <Plus className="w-3 h-3" />
