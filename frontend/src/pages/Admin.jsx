@@ -42,7 +42,7 @@ export const Admin = () => {
   const [newProduct, setNewProduct] = useState({ 
     name: '', name_ru: '', name_tj: '',
     description: '', description_ru: '', description_tj: '',
-    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100, in_stock: true, arrival_date: ''
+    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', colors: '', stock: 100, in_stock: true, arrival_date: ''
   });
   const [newCategory, setNewCategory] = useState({ name: '', name_ru: '', name_tj: '', slug: '', description: '', parent_id: '' });
   const [newTopupCode, setNewTopupCode] = useState({ code: '', amount: 100 });
@@ -202,6 +202,7 @@ export const Admin = () => {
         image_url: allImages[0], // First image is main
         images: allImages,
         sizes: typeof newProduct.sizes === 'string' ? newProduct.sizes.split(',').map(s => s.trim()).filter(s => s) : newProduct.sizes,
+        colors: typeof newProduct.colors === 'string' ? newProduct.colors.split(',').map(c => c.trim()).filter(c => c) : newProduct.colors,
       };
       
       if (editingProduct) {
@@ -213,11 +214,11 @@ export const Admin = () => {
         toast.success('Товар создан!');
       }
 
-      setNewProduct({ 
-        name: '', name_ru: '', name_tj: '',
-        description: '', description_ru: '', description_tj: '',
-        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100, in_stock: true, arrival_date: ''
-      });
+    setNewProduct({ 
+      name: '', name_ru: '', name_tj: '',
+      description: '', description_ru: '', description_tj: '',
+      price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', colors: '', stock: 100, in_stock: true, arrival_date: ''
+    });
       setProductImages([]); // Clear uploaded images
       setImageUrls(['']); // Reset URLs
       fetchAllData();
@@ -477,7 +478,8 @@ export const Admin = () => {
       ...p,
       in_stock: p.in_stock !== undefined ? p.in_stock : true,
       arrival_date: p.arrival_date || '',
-      sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || '')
+      sizes: Array.isArray(p.sizes) ? p.sizes.join(', ') : (p.sizes || ''),
+      colors: Array.isArray(p.colors) ? p.colors.join(', ') : (p.colors || '')
     });
     
     // Set uploaded images
@@ -1743,6 +1745,10 @@ export const Admin = () => {
                   <div>
                     <Label>Размеры (через запятую)</Label>
                     <Input value={newProduct.sizes} onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value})} className="admin-input" placeholder="S, M, L" />
+                  </div>
+                  <div>
+                    <Label>Цвета (через запятую)</Label>
+                    <Input value={newProduct.colors} onChange={(e) => setNewProduct({...newProduct, colors: e.target.value})} className="admin-input" placeholder="Красный, Синий, Черный" />
                   </div>
                   <div className="space-y-2">
                     <Label>URL изображений</Label>
