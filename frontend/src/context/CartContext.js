@@ -29,10 +29,10 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product, quantity = 1, size = null) => {
+  const addItem = (product, quantity = 1, size = null, color = null) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => item.product_id === product.product_id && item.size === size
+        (item) => item.product_id === product.product_id && item.size === size && item.color === color
       );
 
       if (existingIndex >= 0) {
@@ -48,26 +48,27 @@ export const CartProvider = ({ children }) => {
           product,
           quantity,
           size,
+          color,
         },
       ];
     });
   };
 
-  const removeItem = (productId, size = null) => {
+  const removeItem = (productId, size = null, color = null) => {
     setItems((prev) =>
-      prev.filter((item) => !(item.product_id === productId && item.size === size))
+      prev.filter((item) => !(item.product_id === productId && item.size === size && item.color === color))
     );
   };
 
-  const updateQuantity = (productId, quantity, size = null) => {
+  const updateQuantity = (productId, quantity, size = null, color = null) => {
     if (quantity <= 0) {
-      removeItem(productId, size);
+      removeItem(productId, size, color);
       return;
     }
 
     setItems((prev) =>
       prev.map((item) =>
-        item.product_id === productId && item.size === size
+        item.product_id === productId && item.size === size && item.color === color
           ? { ...item, quantity }
           : item
       )
