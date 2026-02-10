@@ -33,6 +33,7 @@ export const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+  const [customRequest, setCustomRequest] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -88,8 +89,9 @@ export const ProductDetail = () => {
       return;
     }
     
-    addItem(product, quantity, selectedSize || null, selectedColor || null);
+    addItem(product, quantity, selectedSize || null, selectedColor || null, customRequest || null);
     toast.success(`${getLocalizedText(product, 'name', lang)} ${lang === 'ru' ? 'добавлен в корзину!' : 'ба сабад илова шуд!'}`);
+    setCustomRequest('');
   };
 
   const handleSubmitReview = async (e) => {
@@ -307,6 +309,19 @@ export const ProductDetail = () => {
                 </div>
               </div>
             )}
+
+            {/* Custom Request */}
+            <div>
+              <label className="text-sm font-bold mb-3 block">
+                {t('product.customRequest')}
+              </label>
+              <Textarea
+                value={customRequest}
+                onChange={(e) => setCustomRequest(e.target.value)}
+                placeholder={t('product.customRequestPlaceholder')}
+                className="tsmarket-input min-h-[80px] resize-none"
+              />
+            </div>
 
             {/* Quantity */}
             <div>
