@@ -48,7 +48,7 @@ export const Helper = () => {
   const [newProduct, setNewProduct] = useState({ 
     name: '', name_ru: '', name_tj: '',
     description: '', description_ru: '', description_tj: '',
-    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100,
+    price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', colors: '', stock: 100,
     in_stock: true, arrival_date: ''
   });
   const [newReward, setNewReward] = useState({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
@@ -110,13 +110,14 @@ export const Helper = () => {
         image_url: allImages[0],
         images: allImages,
         sizes: newProduct.sizes ? (Array.isArray(newProduct.sizes) ? newProduct.sizes : newProduct.sizes.split(',').map(s => s.trim())) : [],
+        colors: newProduct.colors ? (Array.isArray(newProduct.colors) ? newProduct.colors : newProduct.colors.split(',').map(c => c.trim())) : [],
       };
       await productsAPI.create(productData);
       toast.success('Товар создан!');
       setNewProduct({ 
         name: '', name_ru: '', name_tj: '',
         description: '', description_ru: '', description_tj: '',
-        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', stock: 100,
+        price: 0, xp_reward: 10, category_id: '', image_url: '', images: [], sizes: '', colors: '', stock: 100,
         in_stock: true, arrival_date: ''
       });
       setProductImages([]);
@@ -143,6 +144,9 @@ export const Helper = () => {
         sizes: typeof editingProduct.sizes === 'string' 
           ? editingProduct.sizes.split(',').map(s => s.trim()) 
           : editingProduct.sizes,
+        colors: typeof editingProduct.colors === 'string' 
+          ? editingProduct.colors.split(',').map(c => c.trim()) 
+          : editingProduct.colors,
       };
       await productsAPI.update(editingProduct.product_id, productData);
       toast.success('Товар обновлен!');
@@ -587,6 +591,27 @@ export const Helper = () => {
                   </div>
                 </div>
 
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>{lang === 'ru' ? 'Размеры (через запятую)' : 'Андозаҳо (бо вергул)'}</Label>
+                    <Input 
+                      value={newProduct.sizes} 
+                      onChange={(e) => setNewProduct({...newProduct, sizes: e.target.value})} 
+                      className="admin-input" 
+                      placeholder="S, M, L" 
+                    />
+                  </div>
+                  <div>
+                    <Label>{lang === 'ru' ? 'Цвета (через запятую)' : 'Рангҳо (бо вергул)'}</Label>
+                    <Input 
+                      value={newProduct.colors} 
+                      onChange={(e) => setNewProduct({...newProduct, colors: e.target.value})} 
+                      className="admin-input" 
+                      placeholder="Красный, Синий" 
+                    />
+                  </div>
+                </div>
+
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <Label>{lang === 'ru' ? 'Цена' : 'Нарх'}</Label>
@@ -1005,6 +1030,24 @@ export const Helper = () => {
                     <Input 
                       value={editingProduct.name_tj || ''} 
                       onChange={(e) => setEditingProduct({...editingProduct, name_tj: e.target.value})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>{lang === 'ru' ? 'Размеры' : 'Андозаҳо'}</Label>
+                    <Input 
+                      value={Array.isArray(editingProduct.sizes) ? editingProduct.sizes.join(', ') : editingProduct.sizes || ''} 
+                      onChange={(e) => setEditingProduct({...editingProduct, sizes: e.target.value})} 
+                      className="admin-input" 
+                    />
+                  </div>
+                  <div>
+                    <Label>{lang === 'ru' ? 'Цвета' : 'Рангҳо'}</Label>
+                    <Input 
+                      value={Array.isArray(editingProduct.colors) ? editingProduct.colors.join(', ') : editingProduct.colors || ''} 
+                      onChange={(e) => setEditingProduct({...editingProduct, colors: e.target.value})} 
                       className="admin-input" 
                     />
                   </div>
