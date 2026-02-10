@@ -57,8 +57,10 @@ JWT_EXPIRATION_HOURS = 168  # 7 days
 
 # Rate limiting storage (in-memory, resets on server restart)
 rate_limit_store: Dict[str, List[float]] = defaultdict(list)
+auth_rate_limit_store: Dict[str, List[float]] = defaultdict(list)
 RATE_LIMIT_WINDOW = 60  # seconds
 RATE_LIMIT_MAX_REQUESTS = 100  # max requests per window
+AUTH_LIMIT_MAX_REQUESTS = 5    # max login attempts per window
 
 # Rate limiting middleware
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -66,6 +68,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = request.client.host if request.client else "unknown"
         current_time = time.time()
         
+        # 1. Специальная защита для эндпоинтов авторизации
+        if request.url.path.startswith("/api/auth/"):
+            auth_rate_limit_store[client_ip] = [
+                t for t in auth_rate_limit_store[client_ip] 
+                if current_time - t < RATE_LIMIT_WINDOW
+            ]
+            if len(auth_rate_limit_store[client_ip]) >= AUTH_LIMIT_MAX_REQUESTS:
+                return Response(
+                    content='{"detail": "Слишком много попыток входа. Попробуйте через минуту."}',
+                    status_code=429,
+                    media_type="application/json"
+                )
+            auth_rate_limit_store[client_ip].append(current_time)
+
+        # 2. Общий Rate Limit
         # Clean old requests
         rate_limit_store[client_ip] = [
             t for t in rate_limit_store[client_ip] 
@@ -94,7 +111,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         return response
 
-# Input sanitization helper
+# Security Helpers
+def is_safe_url(url: str) -> bool:
+    """Check if the URL is safe to prevent SSRF and malicious links"""
+    if not url:
+        return False
+    # Разрешаем только определенные домены или локальные пути
+    allowed_prefixes = ('/uploads/', 'https://ts-market0001', 'data:image/')
+    return url.startswith(allowed_prefixes)
+
 def sanitize_string(value: str, max_length: int = 1000) -> str:
     """Sanitize string input to prevent XSS and limit length"""
     if not value:
@@ -173,6 +198,9 @@ async def analyze_receipt_with_ai(receipt_image_url: str, expected_amount: float
     if not api_key:
         return {"approved": False, "confidence": "none", "extracted_amount": None, "reason": "API ключ не настроен"}
     
+    if not is_safe_url(receipt_image_url):
+        return {"approved": False, "confidence": "none", "extracted_amount": None, "reason": "Небезопасный URL изображения"}
+
     try:
         # Get image as base64
         image_base64 = None
@@ -294,8 +322,13 @@ app = FastAPI(title="TSMarket API")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["https://ts-market0001-oek6.vercel.app", "https://ts-market0001.vercel.app", "http://localhost:3000"],
-    allow_origin_regex=r"https://ts-market0001-.*\.vercel\.app",
+    allow_origins=[
+        "https://ts-market0001-oek6.vercel.app", 
+        "https://ts-market0001.vercel.app", 
+        "http://localhost:3000"
+    ],
+    # Более строгое регулярное выражение для предотвращения атак через похожие домены
+    allow_origin_regex=r"^https://ts-market0001-[a-z0-9-]+\.vercel\.app$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
