@@ -29,10 +29,14 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(items));
   }, [items]);
 
-  const addItem = (product, quantity = 1, size = null, color = null) => {
+  const addItem = (product, quantity = 1, size = null, color = null, customRequest = null) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => item.product_id === product.product_id && item.size === size && item.color === color
+        (item) => 
+          item.product_id === product.product_id && 
+          item.size === size && 
+          item.color === color &&
+          item.customRequest === customRequest
       );
 
       if (existingIndex >= 0) {
@@ -49,26 +53,35 @@ export const CartProvider = ({ children }) => {
           quantity,
           size,
           color,
+          customRequest,
         },
       ];
     });
   };
 
-  const removeItem = (productId, size = null, color = null) => {
+  const removeItem = (productId, size = null, color = null, customRequest = null) => {
     setItems((prev) =>
-      prev.filter((item) => !(item.product_id === productId && item.size === size && item.color === color))
+      prev.filter((item) => !(
+        item.product_id === productId && 
+        item.size === size && 
+        item.color === color &&
+        item.customRequest === customRequest
+      ))
     );
   };
 
-  const updateQuantity = (productId, quantity, size = null, color = null) => {
+  const updateQuantity = (productId, quantity, size = null, color = null, customRequest = null) => {
     if (quantity <= 0) {
-      removeItem(productId, size, color);
+      removeItem(productId, size, color, customRequest);
       return;
     }
 
     setItems((prev) =>
       prev.map((item) =>
-        item.product_id === productId && item.size === size && item.color === color
+        item.product_id === productId && 
+        item.size === size && 
+        item.color === color &&
+        item.customRequest === customRequest
           ? { ...item, quantity }
           : item
       )
