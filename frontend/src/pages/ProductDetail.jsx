@@ -32,6 +32,7 @@ export const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -56,6 +57,9 @@ export const ProductDetail = () => {
         if (prodRes.data.sizes?.length > 0) {
           setSelectedSize(prodRes.data.sizes[0]);
         }
+        if (prodRes.data.colors?.length > 0) {
+          setSelectedColor(prodRes.data.colors[0]);
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Product not found');
@@ -78,8 +82,13 @@ export const ProductDetail = () => {
       toast.error('Please select a size');
       return;
     }
+
+    if (product.colors?.length > 0 && !selectedColor) {
+      toast.error(lang === 'ru' ? 'Пожалуйста, выберите цвет' : 'Лутфан рангро интихоб кунед');
+      return;
+    }
     
-    addItem(product, quantity, selectedSize || null);
+    addItem(product, quantity, selectedSize || null, selectedColor || null);
     toast.success(`${getLocalizedText(product, 'name', lang)} ${lang === 'ru' ? 'добавлен в корзину!' : 'ба сабад илова шуд!'}`);
   };
 
@@ -261,10 +270,10 @@ export const ProductDetail = () => {
             {/* Size Selector */}
             {product.sizes?.length > 0 && (
               <div>
-                <label className="text-sm font-bold mb-3 block">Select Size</label>
+                <label className="text-sm font-bold mb-3 block">{lang === 'ru' ? 'Выберите размер' : 'Интихоби андоза'}</label>
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
                   <SelectTrigger className="w-full tsmarket-input" data-testid="size-select">
-                    <SelectValue placeholder="Choose a size" />
+                    <SelectValue placeholder={lang === 'ru' ? 'Выберите размер' : 'Интихоби андоза'} />
                   </SelectTrigger>
                   <SelectContent>
                     {product.sizes.map((size) => (
@@ -274,6 +283,28 @@ export const ProductDetail = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Color Selector */}
+            {product.colors?.length > 0 && (
+              <div>
+                <label className="text-sm font-bold mb-3 block">{lang === 'ru' ? 'Выберите цвет' : 'Интихоби ранг'}</label>
+                <div className="flex flex-wrap gap-3">
+                  {product.colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={`px-4 py-2 rounded-full border-2 transition-all font-bold text-sm ${
+                        selectedColor === color 
+                          ? 'border-primary bg-primary/10 text-primary' 
+                          : 'border-border bg-white hover:border-primary/50'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
