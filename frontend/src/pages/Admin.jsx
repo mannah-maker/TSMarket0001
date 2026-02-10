@@ -103,7 +103,7 @@ export const Admin = () => {
     setLoading(true);
     try {
       // Base data that both admin and helper can access
-      const [statsRes, usersRes, productsRes, categoriesRes, codesRes, ordersRes, prizesRes, requestsRes, promoRes, tagsRes] = await Promise.all([
+      const [statsRes, usersRes, productsRes, categoriesRes, codesRes, ordersRes, prizesRes, requestsRes, withdrawalRes, promoRes, tagsRes] = await Promise.all([
         adminAPI.getStats(),
         adminAPI.getUsers(),
         productsAPI.getAll({ limit: 100000 }),
@@ -167,7 +167,7 @@ export const Admin = () => {
       setWheelPrizes(prizesRes.data);
       setAdminSettings(settingsData);
       setTopupRequests(requestsRes.data);
-      setWithdrawalRequests(arguments[1].data);
+      setWithdrawalRequests(withdrawalRes.data);
       setPromoCodes(promoRes.data);
       setTags(tagsRes.data);
       setMissions(missionsData);
