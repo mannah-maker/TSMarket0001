@@ -67,6 +67,8 @@ export const translations = {
       comment: 'Шарҳ',
       submit: 'Фиристодан',
       pleaseLogin: 'Лутфан барои гузоштани шарҳ ворид шавед',
+      customRequest: 'Хоҳишҳо барои мол (ихтиёрӣ)',
+      customRequestPlaceholder: 'Нависед, ки кадом маҳсулотро мехоҳед...',
     },
     // Cart
     cart: {
@@ -107,6 +109,7 @@ export const translations = {
       levelUp: 'Сатҳи нав!',
       orderComplete: 'Фармоиш иҷро шуд!',
       checkoutFailed: 'Хатогӣ дар пардохт',
+      request: 'Хоҳиш',
     },
     // Auth
     auth: {
@@ -326,6 +329,8 @@ export const translations = {
       comment: 'Комментарий',
       submit: 'Отправить',
       pleaseLogin: 'Пожалуйста, войдите, чтобы оставить отзыв',
+      customRequest: 'Пожелания к товару (необязательно)',
+      customRequestPlaceholder: 'Напишите, какой товар вы хотите...',
     },
     // Cart
     cart: {
@@ -365,7 +370,8 @@ export const translations = {
       insufficientBalance: 'Недостаточно средств. Пополните баланс.',
       levelUp: 'Новый уровень!',
       orderComplete: 'Заказ оформлен!',
-      checkoutFailed: 'Ошибка оформления заказа',
+      checkoutFailed: 'Ошибка при оформлении',
+      request: 'Пожелание',
     },
     // Auth
     auth: {
