@@ -492,6 +492,8 @@ class CartItem(BaseModel):
     product_id: str
     quantity: int = 1
     size: Optional[str] = None
+    color: Optional[str] = None
+    custom_request: Optional[str] = None
 
 class CreateOrderRequest(BaseModel):
     items: List['CartItem']
@@ -505,7 +507,9 @@ class OrderItem(BaseModel):
     price: float
     quantity: int
     size: Optional[str] = None
+    color: Optional[str] = None
     xp_reward: int
+    custom_request: Optional[str] = None
 
 class OrderStatusUpdate(BaseModel):
     status: str
@@ -1393,7 +1397,9 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
             price=price_after_product_discount,
             quantity=item.quantity,
             size=item.size,
-            xp_reward=item_xp
+            color=item.color,
+            xp_reward=item_xp,
+            custom_request=item.custom_request
         ))
         
         total += item_total
