@@ -831,6 +831,28 @@ export const Admin = () => {
   const pendingWithdrawals = withdrawalRequests.filter(r => r.status === 'pending');
   const openTickets = supportTickets.filter(t => t.status === 'open');
 
+  // Group orders by user
+  const groupedOrders = orders.reduce((acc, order) => {
+    const userId = order.user_id || 'unknown';
+    if (!acc[userId]) {
+      acc[userId] = {
+        user_id: userId,
+        user_name: order.user_name || 'Unknown User',
+        user_email: order.user_email || '',
+        orders: []
+      };
+    }
+    acc[userId].orders.push(order);
+    return acc;
+  }, {});
+
+  // Sort users by their latest order date
+  const sortedGroupedOrders = Object.values(groupedOrders).sort((a, b) => {
+    const latestA = new Date(a.orders[0]?.created_at || 0);
+    const latestB = new Date(b.orders[0]?.created_at || 0);
+    return latestB - latestA;
+  });
+
   // Check if user is admin or helper
   const isHelper = user?.role === 'helper';
   const canAccessAdmin = isAdmin || isHelper;
@@ -2159,114 +2181,142 @@ export const Admin = () => {
           <TabsContent value="orders" className="space-y-6">
             <div className="admin-card">
               <h3 className="font-bold mb-4">{t('admin.orders')} ({orders.length})</h3>
-              <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2">
+              <div className="space-y-8 max-h-[800px] overflow-y-auto pr-2">
                 {orders.length === 0 ? (
                   <p className="text-slate-400 text-center py-8">Заказов пока нет</p>
                 ) : (
-                  orders.map((o) => (
-                    <div key={o.order_id} className="p-4 bg-slate-700/50 rounded-xl border border-slate-600 hover:border-primary/30 transition-colors">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
-                        <div>
-                          <p className="font-mono text-xs text-slate-400 uppercase tracking-wider">{o.order_id}</p>
-                          <p className="text-sm font-medium">{new Date(o.created_at).toLocaleString()}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                            o.status === 'delivered' ? 'bg-green-500/20 text-green-500' :
-                            o.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
-                            o.status === 'returned' ? 'bg-gray-500/20 text-gray-500' :
-                            o.status === 'return_pending' ? 'bg-purple-500/20 text-purple-400' :
-                            o.status === 'shipped' ? 'bg-orange-500/20 text-orange-500' :
-                            o.status === 'confirmed' ? 'bg-blue-500/20 text-blue-500' :
-                            'bg-yellow-500/20 text-yellow-500'
-                          }`}>
-                            {o.status === 'return_pending' ? 'ОЖИДАЕТ ВОЗВРАТА' : o.status.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-1">
-                          <p className="text-sm text-slate-400">Состав заказа:</p>
-                          <div className="text-sm">
-                            {o.items?.map((item, idx) => (
-                              <div key={idx} className="flex justify-between">
-                                <span>{item.product_name} x{item.quantity}</span>
-                                <span className="text-slate-400">{item.price * item.quantity} c.</span>
-                              </div>
-                            ))}
-                            <div className="border-t border-slate-600 mt-1 pt-1 flex justify-between font-bold text-primary">
-                              <span>Итого:</span>
-                              <span>{o.total} coins</span>
-                            </div>
+                  sortedGroupedOrders.map((group) => (
+                    <div key={group.user_id} className="space-y-4 p-4 bg-slate-800/30 rounded-2xl border border-slate-700">
+                      <div className="flex items-center justify-between border-b border-slate-700 pb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <User className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-lg">{group.user_name}</p>
+                            <p className="text-xs text-slate-400">{group.user_email}</p>
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          {o.delivery_address && (
-                            <div className="p-2 bg-slate-800/50 rounded text-sm">
-                              <span className="text-slate-400 flex items-center gap-1"><MapPin className="w-3 h-3" /> Адрес:</span>
-                              <p className="text-white">{o.delivery_address}</p>
-                            </div>
-                          )}
-                          {o.phone_number && (
-                            <div className="p-2 bg-slate-800/50 rounded text-sm">
-                              <span className="text-slate-400 flex items-center gap-1"><User className="w-3 h-3" /> Телефон:</span>
-                              <p className="text-white">{o.phone_number}</p>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-xs font-bold px-3 py-1 bg-slate-700 rounded-full text-slate-300">
+                          {group.orders.length} {group.orders.length === 1 ? 'заказ' : 'заказа'}
+                        </span>
                       </div>
+                      
+                      <div className="space-y-4 pl-4 border-l-2 border-slate-700">
+                        {group.orders.map((o) => (
+                          <div key={o.order_id} className="p-4 bg-slate-700/50 rounded-xl border border-slate-600 hover:border-primary/30 transition-colors">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+                              <div>
+                                <p className="font-mono text-xs text-slate-400 uppercase tracking-wider">{o.order_id}</p>
+                                <p className="text-sm font-medium">{new Date(o.created_at).toLocaleString()}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                  o.status === 'delivered' ? 'bg-green-500/20 text-green-500' :
+                                  o.status === 'cancelled' ? 'bg-red-500/20 text-red-500' :
+                                  o.status === 'returned' ? 'bg-gray-500/20 text-gray-500' :
+                                  o.status === 'return_pending' ? 'bg-purple-500/20 text-purple-400' :
+                                  o.status === 'shipped' ? 'bg-orange-500/20 text-orange-500' :
+                                  o.status === 'confirmed' ? 'bg-blue-500/20 text-blue-500' :
+                                  'bg-yellow-500/20 text-yellow-500'
+                                }`}>
+                                  {o.status === 'return_pending' ? 'ОЖИДАЕТ ВОЗВРАТА' : o.status.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
 
-                      <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-600">
-                        <Button 
-                          size="sm" 
-                          variant={o.status === 'confirmed' ? 'default' : 'outline'}
-                          className="h-8 text-xs"
-                          onClick={() => handleUpdateOrderStatus(o.order_id, 'confirmed')}
-                        >
-                          <Check className="w-3 h-3 mr-1" /> Одобрить
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={o.status === 'shipped' ? 'default' : 'outline'}
-                          className="h-8 text-xs"
-                          onClick={() => handleUpdateOrderStatus(o.order_id, 'shipped')}
-                        >
-                          <Truck className="w-3 h-3 mr-1" /> Отправлено
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={o.status === 'delivered' ? 'default' : 'outline'}
-                          className="h-8 text-xs"
-                          onClick={() => handleUpdateOrderStatus(o.order_id, 'delivered')}
-                        >
-                          <CheckCircle className="w-3 h-3 mr-1" /> Доставлено
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={o.status === 'cancelled' ? 'destructive' : 'outline'}
-                          className="h-8 text-xs"
-                          onClick={() => handleUpdateOrderStatus(o.order_id, 'cancelled')}
-                        >
-                          <XCircle className="w-3 h-3 mr-1" /> Отменить
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          className="h-8 text-xs"
-                          onClick={() => handleDeleteOrder(o.order_id)}
-                        >
-                          <Trash2 className="w-3 h-3 mr-1" /> Удалить
-                        </Button>
-                        {o.status === 'return_pending' && (
-                          <Button 
-                            size="sm" 
-                            className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => handleApproveReturn(o.order_id)}
-                          >
-                            <Check className="w-3 h-3 mr-1" /> Одобрить возврат (90%)
-                          </Button>
-                        )}
+                            <div className="grid md:grid-cols-2 gap-4 mb-4">
+                              <div className="space-y-1">
+                                <p className="text-sm text-slate-400">Состав заказа:</p>
+                                <div className="text-sm">
+                                  {o.items?.map((item, idx) => (
+                                    <div key={idx} className="flex flex-col mb-2 last:mb-0">
+                                      <div className="flex justify-between">
+                                        <span>{item.product_name} x{item.quantity}</span>
+                                        <span className="text-slate-400">{item.price * item.quantity} c.</span>
+                                      </div>
+                                      {item.custom_request && (
+                                        <p className="text-xs text-primary italic mt-0.5">
+                                          Пожелание: {item.custom_request}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                  <div className="border-t border-slate-600 mt-1 pt-1 flex justify-between font-bold text-primary">
+                                    <span>Итого:</span>
+                                    <span>{o.total} coins</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                {o.delivery_address && (
+                                  <div className="p-2 bg-slate-800/50 rounded text-sm">
+                                    <span className="text-slate-400 flex items-center gap-1"><MapPin className="w-3 h-3" /> Адрес:</span>
+                                    <p className="text-white">{o.delivery_address}</p>
+                                  </div>
+                                )}
+                                {o.phone_number && (
+                                  <div className="p-2 bg-slate-800/50 rounded text-sm">
+                                    <span className="text-slate-400 flex items-center gap-1"><User className="w-3 h-3" /> Телефон:</span>
+                                    <p className="text-white">{o.phone_number}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-600">
+                              <Button 
+                                size="sm" 
+                                variant={o.status === 'confirmed' ? 'default' : 'outline'}
+                                className="h-8 text-xs"
+                                onClick={() => handleUpdateOrderStatus(o.order_id, 'confirmed')}
+                              >
+                                <Check className="w-3 h-3 mr-1" /> Одобрить
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant={o.status === 'shipped' ? 'default' : 'outline'}
+                                className="h-8 text-xs"
+                                onClick={() => handleUpdateOrderStatus(o.order_id, 'shipped')}
+                              >
+                                <Truck className="w-3 h-3 mr-1" /> Отправлено
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant={o.status === 'delivered' ? 'default' : 'outline'}
+                                className="h-8 text-xs"
+                                onClick={() => handleUpdateOrderStatus(o.order_id, 'delivered')}
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" /> Доставлено
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant={o.status === 'cancelled' ? 'destructive' : 'outline'}
+                                className="h-8 text-xs"
+                                onClick={() => handleUpdateOrderStatus(o.order_id, 'cancelled')}
+                              >
+                                <XCircle className="w-3 h-3 mr-1" /> Отменить
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                className="h-8 text-xs"
+                                onClick={() => handleDeleteOrder(o.order_id)}
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" /> Удалить
+                              </Button>
+                              {o.status === 'return_pending' && (
+                                <Button 
+                                  size="sm" 
+                                  className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                                  onClick={() => handleApproveReturn(o.order_id)}
+                                >
+                                  <Check className="w-3 h-3 mr-1" /> Одобрить возврат (90%)
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))
