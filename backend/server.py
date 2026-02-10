@@ -3130,18 +3130,6 @@ async def seed_database():
     
     return {"message": "Database seeded successfully"}
 
-# Include router
-app.include_router(api_router)
-
-
-# Logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-
 # ==================== THEMES API ====================
 
 @api_router.get("/themes")
@@ -3181,5 +3169,14 @@ async def delete_theme(theme_id: str, user: User = Depends(require_admin)):
     await db.themes.delete_one({"theme_id": theme_id})
     return {"message": "Тема удалена"}
 
-# Add the router to the app if not already added
-# (It's already added in the original code as api_router)
+# Include router
+app.include_router(api_router)
+
+
+# Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
