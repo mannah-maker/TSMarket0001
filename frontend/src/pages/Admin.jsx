@@ -363,14 +363,7 @@ export const Admin = () => {
   const handleSaveSettings = async () => {
     try {
       await adminAPI.updateSettings({
-        card_number: adminSettings.card_number,
-        card_holder: adminSettings.card_holder,
-        additional_info: adminSettings.additional_info,
-        support_telegram: adminSettings.support_telegram || '',
-        support_whatsapp: adminSettings.support_whatsapp || '',
-        support_email: adminSettings.support_email || '',
-        support_phone: adminSettings.support_phone || '',
-        ai_auto_approve_enabled: adminSettings.ai_auto_approve_enabled || false,
+        ...adminSettings,
         active_theme: adminSettings.active_theme || 'default'
       });
       toast.success('Settings saved');
@@ -1374,6 +1367,16 @@ export const Admin = () => {
                   <Plus className="w-6 h-6" />
                   <span className="text-xs font-bold uppercase">Добавить</span>
                 </button>
+              </div>
+
+              <div className="flex justify-end mb-6">
+                <Button 
+                  onClick={handleSaveSettings}
+                  className="tsmarket-btn-primary px-6"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Применить выбранную тему
+                </Button>
               </div>
 
               {showThemeForm && (
