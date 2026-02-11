@@ -79,6 +79,7 @@ export const Admin = () => {
   const [viewingImage, setViewingImage] = useState(null);
   const [isEditingRevenue, setIsEditingRevenue] = useState(false);
   const [newRevenueValue, setNewRevenueValue] = useState('');
+  const [isSwitchingTheme, setIsSwitchingTheme] = useState(false);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking permissions
@@ -263,6 +264,23 @@ export const Admin = () => {
   };
 
   // Topup code handlers
+  const handleQuickThemeSwitch = async (themeId) => {
+    setIsSwitchingTheme(true);
+    try {
+      const updatedSettings = {
+        ...adminSettings,
+        active_theme: themeId
+      };
+      await adminAPI.updateSettings(updatedSettings);
+      setAdminSettings(updatedSettings);
+      toast.success(`Тема переключена на ${themes.find(t => t.theme_id === themeId)?.name || themeId}`);
+    } catch (error) {
+      toast.error('Ошибка переключения темы');
+    } finally {
+      setIsSwitchingTheme(false);
+    }
+  };
+
   const handleCreateTopupCode = async (e) => {
     e.preventDefault();
     try {
@@ -880,11 +898,35 @@ export const Admin = () => {
     <div className="min-h-screen admin-panel" data-testid="admin-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Settings className="w-8 h-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">{t('admin.title')}</h1>
-            <p className="text-slate-400">{t('admin.subtitle')}</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Settings className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">{t('admin.title')}</h1>
+              <p className="text-slate-400">{t('admin.subtitle')}</p>
+            </div>
+          </div>
+          
+          {/* Quick Theme Switcher */}
+          <div className="flex items-center gap-2 bg-slate-800/50 p-2 rounded-2xl border border-slate-700 overflow-x-auto no-scrollbar">
+            <span className="text-xs font-bold text-slate-500 uppercase ml-2 mr-1 whitespace-nowrap">Стиль:</span>
+            {themes.map((theme) => (
+              <Button
+                key={theme.theme_id}
+                variant="ghost"
+                size="sm"
+                disabled={isSwitchingTheme}
+                onClick={() => handleQuickThemeSwitch(theme.theme_id)}
+                className={`rounded-xl h-9 px-3 flex items-center gap-2 transition-all ${
+                  (adminSettings.active_theme || 'default') === theme.theme_id
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'hover:bg-slate-700 text-slate-300'
+                }`}
+              >
+                <span className="text-lg">{theme.icon}</span>
+                <span className="text-xs font-bold whitespace-nowrap">{theme.name}</span>
+              </Button>
+            ))}
           </div>
         </div>
 
