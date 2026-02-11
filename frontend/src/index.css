@@ -242,3 +242,20 @@
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
+
+/* Theme-specific gradients and styles */
+.new_year {
+    background: linear-gradient(135deg, #1a472a 0%, #0d2e1c 100%) !important;
+}
+
+.valentine {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%) !important;
+}
+
+.ramadan {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+.men_day {
+    background: linear-gradient(135deg, #2d3436 0%, #636e72 100%) !important;
+}
