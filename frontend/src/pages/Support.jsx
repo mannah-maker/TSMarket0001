@@ -16,6 +16,7 @@ export const Support = () => {
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState([]);
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const [activeThemeId, setActiveThemeId] = useState('default');
   const [contacts, setContacts] = useState({
     telegram: '',
     whatsapp: '',
@@ -49,6 +50,9 @@ export const Support = () => {
     try {
       const res = await supportAPI.getContacts();
       setContacts(res.data);
+      if (res.data?.active_theme) {
+        setActiveThemeId(res.data.active_theme);
+      }
     } catch (error) {
       console.error('Failed to fetch contacts:', error);
     }
@@ -135,7 +139,7 @@ export const Support = () => {
   const hasContacts = contacts.telegram || contacts.whatsapp || contacts.email || contacts.phone;
 
   return (
-    <div className="min-h-screen tsmarket-gradient py-8">
+    <div className={`min-h-screen ${activeThemeId === 'default' ? 'tsmarket-gradient' : activeThemeId} py-8`}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
