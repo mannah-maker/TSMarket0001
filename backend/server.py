@@ -3096,6 +3096,17 @@ async def seed_database():
             "created_at": datetime.now(timezone.utc).isoformat()
         },
         {
+            "theme_id": "ramadan",
+            "name": "Рамазан",
+            "icon": "🌙",
+            "hero_image": "https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=2070&auto=format&fit=crop",
+            "gradient": "bg-gradient-to-br from-indigo-900 via-slate-900 to-emerald-900 text-white",
+            "title_color": "text-amber-400",
+            "tagline": "🌙 Рамазан Мубарак!",
+            "is_system": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        },
+        {
             "theme_id": "men_day",
             "name": "23 Февраля",
             "icon": "🎖️",
