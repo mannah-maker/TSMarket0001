@@ -127,6 +127,7 @@ export const Catalog = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
+  const [activeThemeId, setActiveThemeId] = useState('default');
   const ITEMS_PER_PAGE = 12;
   
   const initialFetchRef = useRef(false);
@@ -157,6 +158,17 @@ export const Catalog = () => {
       }
     };
     fetchCategories();
+    
+    // Fetch active theme
+    const fetchTheme = async () => {
+      try {
+        const settingsRes = await supportAPI.getSettings();
+        if (settingsRes?.data?.active_theme) {
+          setActiveThemeId(settingsRes.data.active_theme);
+        }
+      } catch (e) {}
+    };
+    fetchTheme();
   }, []);
 
   useEffect(() => {
@@ -272,7 +284,7 @@ export const Catalog = () => {
   const parentCategories = safeCategories.filter(cat => !cat.parent_id);
 
   return (
-    <div className="min-h-screen tsmarket-gradient py-8" data-testid="catalog-page">
+    <div className={`min-h-screen ${activeThemeId === 'default' ? 'tsmarket-gradient' : activeThemeId} py-8`} data-testid="catalog-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
