@@ -13,6 +13,7 @@ export const Profile = () => {
   const { t, lang } = useLanguage();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeThemeId, setActiveThemeId] = useState('default');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,6 +34,17 @@ export const Profile = () => {
       }
     };
     fetchOrders();
+
+    // Fetch active theme
+    const fetchTheme = async () => {
+      try {
+        const settingsRes = await supportAPI.getSettings();
+        if (settingsRes?.data?.active_theme) {
+          setActiveThemeId(settingsRes.data.active_theme);
+        }
+      } catch (e) {}
+    };
+    fetchTheme();
   }, [isAuthenticated, navigate]);
 
   if (!isAuthenticated || !user) return null;
@@ -53,7 +65,7 @@ export const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen tsmarket-gradient py-8" data-testid="profile-page">
+    <div className={`min-h-screen ${activeThemeId === 'default' ? 'tsmarket-gradient' : activeThemeId} py-8`} data-testid="profile-page">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Profile Header */}
         <div className="tsmarket-card p-8 mb-8" data-testid="profile-header">
