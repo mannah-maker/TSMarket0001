@@ -223,7 +223,7 @@ export const Profile = () => {
           </div>
         )}
 
-        {/* Order History %}
+        {/* Order History */}
         <div className="tsmarket-card p-6" data-testid="order-history">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <ShoppingBag className="w-5 h-5" />
