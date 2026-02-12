@@ -426,26 +426,41 @@ export const Admin = () => {
 
   // User management handlers
   const handleUpdateUserRole = async (userId, newRole) => {
+    const targetUser = users.find(u => u.user_id === userId);
+    if (targetUser && (targetUser.is_admin || targetUser.role === 'admin') && userId !== user?.user_id) {
+      toast.error('Нельзя изменять роль другого администратора');
+      return;
+    }
     try {
       await adminAPI.updateUserRole(userId, newRole);
       toast.success('Роль пользователя обновлена');
       fetchAllData();
     } catch (error) {
-      toast.error('Ошибка обновления роли');
+      toast.error(error.response?.data?.detail || 'Ошибка обновления роли');
     }
   };
 
   const handleToggleAdmin = async (userId, currentIsAdmin) => {
+    const targetUser = users.find(u => u.user_id === userId);
+    if (targetUser && (targetUser.is_admin || targetUser.role === 'admin') && userId !== user?.user_id) {
+      toast.error('Нельзя изменять статус администратора другого администратора');
+      return;
+    }
     try {
       await adminAPI.toggleAdmin(userId, !currentIsAdmin);
       toast.success('User status updated');
       fetchAllData();
     } catch (error) {
-      toast.error('Failed to update user');
+      toast.error(error.response?.data?.detail || 'Failed to update user');
     }
   };
 
   const handleDeleteUser = async (userId) => {
+    const targetUser = users.find(u => u.user_id === userId);
+    if (targetUser && (targetUser.is_admin || targetUser.role === 'admin')) {
+      toast.error('Нельзя удалить администратора');
+      return;
+    }
     if (!window.confirm('Delete this user? This cannot be undone.')) return;
     try {
       await adminAPI.deleteUser(userId);
@@ -518,6 +533,10 @@ export const Admin = () => {
 
   const handleSaveUserEdit = async () => {
     if (!editingUser) return;
+    if ((editingUser.is_admin || editingUser.role === 'admin') && editingUser.user_id !== user?.user_id) {
+      toast.error('Нельзя изменять данные другого администратора');
+      return;
+    }
     try {
       await adminAPI.updateUserBalance(editingUser.user_id, parseFloat(editBalance));
       await adminAPI.updateUserXP(editingUser.user_id, parseInt(editXP));
@@ -525,7 +544,7 @@ export const Admin = () => {
       setEditingUser(null);
       fetchAllData();
     } catch (error) {
-      toast.error('Failed to update user');
+      toast.error(error.response?.data?.detail || 'Failed to update user');
     }
   };
 
