@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { productsAPI, categoriesAPI, supportAPI, adminAPI } from '../lib/api';
+import { productsAPI, categoriesAPI, supportAPI, adminAPI, gamificationAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -49,6 +49,8 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
   const [activeThemeId, setActiveThemeId] = useState('default');
   const [themes, setThemes] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [activities, setActivities] = useState([]);
 
   const parentCategories = categories.filter(cat => !cat.parent_id);
 
@@ -90,6 +92,11 @@ export const Home = () => {
           
         setProducts(popularProducts);
         setCategories(categoriesData);
+        const leaderboardRes = await gamificationAPI.getLeaderboard().catch(() => ({ data: [] }));
+        const activitiesRes = await gamificationAPI.getActivityFeed().catch(() => ({ data: [] }));
+        setLeaderboard(leaderboardRes.data || []);
+        setActivities(activitiesRes.data || []);
+
 
         try {
           window.__CATALOG_CACHE__ = {
@@ -301,6 +308,66 @@ export const Home = () => {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Gamification & Social Sections */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Leaderboard */}
+            <div className="tsmarket-card p-8">
+              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-yellow-500" />
+                {t('home.leaderboard')}
+              </h2>
+              <div className="space-y-4">
+                {leaderboard.map((user, index) => (
+                  <div key={user.user_id} className="flex items-center justify-between p-3 rounded-xl bg-white shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <span className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${index < 3 ? 'bg-yellow-500 text-white' : 'bg-slate-100'}`}>
+                        {index + 1}
+                      </span>
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                        {user.picture ? <img src={user.picture} alt={user.name} className="w-full h-full object-cover" /> : <span className="font-bold">{user.name[0]}</span>}
+                      </div>
+                      <div>
+                        <p className="font-bold">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">Lvl {user.level}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-primary">{user.xp} XP</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Activity Feed */}
+            <div className="tsmarket-card p-8">
+              <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                <Zap className="w-8 h-8 text-orange-500" />
+                {t('home.activityFeed')}
+              </h2>
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {activities.map((activity) => (
+                  <div key={activity.activity_id} className="p-4 rounded-xl border border-slate-100 bg-white">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-sm">{activity.user_name}</span>
+                      <span className="text-[10px] text-muted-foreground">{new Date(activity.created_at).toLocaleTimeString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-600">{activity.description}</p>
+                    <div className="mt-2">
+                      {activity.activity_type === 'level_up' && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Level Up!</span>}
+                      {activity.activity_type === 'achievement' && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold">Achievement</span>}
+                      {activity.activity_type === 'purchase' && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">New Purchase</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
