@@ -21,6 +21,7 @@ import { Delivery } from './pages/Delivery';
 import { Support } from './pages/Support';
 import { OrderTracking } from './pages/OrderTracking';
 import { Missions } from './pages/Missions';
+import { PublicProfile } from './pages/PublicProfile';
 import './App.css';
 
 // Protected Route for Delivery
@@ -82,6 +83,7 @@ const AppRouter = () => {
           <Route path="/helper" element={<Helper />} />
           <Route path="/delivery" element={<DeliveryRoute><Delivery /></DeliveryRoute>} />
           <Route path="/order/:orderId" element={<OrderTracking />} />
+          <Route path="/user/:userId" element={<PublicProfile />} />
         </Routes>
       </main>
       {!isAdminPage && <Footer />}
