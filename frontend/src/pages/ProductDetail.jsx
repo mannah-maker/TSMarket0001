@@ -13,7 +13,6 @@ import {
   Star, MessageSquare, Send, User
 } from 'lucide-react';
 import { toast } from 'sonner';
-
 // Helper function to get localized text
 const getLocalizedText = (item, field, lang) => {
   if (!item) return '';
@@ -37,7 +36,6 @@ export const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  
   // Reviews state
   const [reviews, setReviews] = useState([]);
   const [newReviewRating, setNewReviewRating] = useState(5);
