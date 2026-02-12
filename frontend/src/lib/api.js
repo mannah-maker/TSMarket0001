@@ -19,7 +19,6 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
 // Auth API
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
@@ -46,13 +45,11 @@ export const productsAPI = {
   update: (id, data) => api.put(`/products/${id}`, data),
   delete: (id) => api.delete(`/products/${id}`),
 };
-
 // Reviews API
 export const reviewsAPI = {
   getForProduct: (productId) => api.get(`/reviews/${productId}`),
   create: (data) => api.post('/reviews', data),
 };
-
 // Orders API
 export const ordersAPI = {
   create: (items, deliveryAddress, phoneNumber, promoCode = null) => api.post('/orders', { 
