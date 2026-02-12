@@ -391,6 +391,8 @@ class User(BaseModel):
     role: str = "user"  # "user", "helper", "admin", "delivery"
     wheel_spins_available: int = 0
     claimed_rewards: List[int] = []
+    last_bonus_claim: Optional[datetime] = None
+    achievements: List[str] = []
     created_at: datetime
 
 class UserPublic(BaseModel):
@@ -634,6 +636,8 @@ class AdminSettings(BaseModel):
     # AI Assistant
     ai_auto_approve_enabled: bool = False
     active_theme: str = "default"
+    daily_bonus_coins: float = 10.0
+    daily_bonus_xp: int = 50
 
 class AdminSettingsUpdate(BaseModel):
     card_number: str
@@ -645,6 +649,8 @@ class AdminSettingsUpdate(BaseModel):
     support_phone: str = ""
     ai_auto_approve_enabled: bool = False
     active_theme: str = "default"
+    daily_bonus_coins: float = 10.0
+    daily_bonus_xp: int = 50
 
 class Reward(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -667,6 +673,20 @@ class Review(BaseModel):
     comment: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
+class ActivityFeed(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    activity_id: str = Field(default_factory=lambda: f"act_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    user_name: str
+    activity_type: str  # "level_up", "achievement", "purchase"
+    description: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ReviewLike(BaseModel):
+    user_id: str
+    review_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 class ReviewCreate(BaseModel):
     product_id: str
     rating: int = Field(..., ge=1, le=5)
@@ -835,6 +855,48 @@ def total_xp_for_level(level: int) -> int:
         total += 100 + l * 50
     return total
 
+
+async def log_activity(user_id: str, user_name: str, activity_type: str, description: str):
+    activity = ActivityFeed(
+        user_id=user_id,
+        user_name=user_name,
+        activity_type=activity_type,
+        description=description
+    )
+    activity_dict = activity.model_dump()
+    activity_dict["created_at"] = activity_dict["created_at"].isoformat()
+    await db.activity_feed.insert_one(activity_dict)
+
+async def check_achievements(user_id: str):
+    user_data = await db.users.find_one({"user_id": user_id})
+    if not user_data or user_data.get("level", 1) < 5:
+        return []
+    
+    current_achievements = user_data.get("achievements", [])
+    new_achievements = []
+    
+    # 1. Первопроходец (Pioneer) - Always for level 5+
+    if "pioneer" not in current_achievements:
+        new_achievements.append("pioneer")
+    
+    # 2. Мастер уровней (Level Master) - Level 10+
+    if user_data.get("level", 1) >= 10 and "level_master" not in current_achievements:
+        new_achievements.append("level_master")
+        
+    # 3. Богач (Rich) - Balance > 1000
+    if user_data.get("balance", 0) >= 1000 and "rich" not in current_achievements:
+        new_achievements.append("rich")
+        
+    if new_achievements:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$push": {"achievements": {"$each": new_achievements}}}
+        )
+        for ach in new_achievements:
+            ach_names = {"pioneer": "Первопроходец", "level_master": "Мастер уровней", "rich": "Богач"}
+            await log_activity(user_id, user_data["name"], "achievement", f"получил достижение: {ach_names.get(ach, ach)}")
+            
+    return new_achievements
 async def get_current_user(request: Request) -> Optional[User]:
     # Try cookie first
     session_token = request.cookies.get("session_token")
@@ -2841,6 +2903,99 @@ async def respond_to_ticket(ticket_id: str, response: str, status: str = "resolv
         raise HTTPException(status_code=404, detail="Заявка не найдена")
     return {"message": "Ответ отправлен"}
 
+
+# ==================== EXTENDED GAMIFICATION ====================
+
+@api_router.post("/user/daily-bonus")
+async def claim_daily_bonus(user: User = Depends(require_user)):
+    user_data = await db.users.find_one({"user_id": user.user_id})
+    
+    last_claim = user_data.get("last_bonus_claim")
+    if last_claim:
+        if isinstance(last_claim, str):
+            last_claim = datetime.fromisoformat(last_claim)
+        if last_claim.tzinfo is None:
+            last_claim = last_claim.replace(tzinfo=timezone.utc)
+            
+        if datetime.now(timezone.utc) - last_claim < timedelta(hours=24):
+            time_left = timedelta(hours=24) - (datetime.now(timezone.utc) - last_claim)
+            hours, remainder = divmod(time_left.seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+            raise HTTPException(status_code=400, detail=f"Бонус будет доступен через {hours}ч {minutes}м")
+    
+    settings = await db.admin_settings.find_one({"settings_id": "admin_settings"})
+    coins = settings.get("daily_bonus_coins", 10.0) if settings else 10.0
+    xp = settings.get("daily_bonus_xp", 50) if settings else 50
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {
+            "$inc": {"balance": coins, "xp": xp},
+            "$set": {"last_bonus_claim": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    # Recalculate level
+    updated_user = await db.users.find_one({"user_id": user.user_id})
+    new_level = calculate_level(updated_user["xp"])
+    if new_level > updated_user["level"]:
+        await db.users.update_one({"user_id": user.user_id}, {"$set": {"level": new_level}})
+        await log_activity(user.user_id, user.name, "level_up", f"достиг {new_level} уровня!")
+    
+    await check_achievements(user.user_id)
+    
+    return {"message": "Ежедневный бонус получен!", "coins": coins, "xp": xp}
+
+@api_router.get("/leaderboard")
+async def get_leaderboard():
+    users = await db.users.find(
+        {}, 
+        {"user_id": 1, "name": 1, "picture": 1, "xp": 1, "level": 1, "_id": 0}
+    ).sort("xp", -1).limit(10).to_list(10)
+    return users
+
+@api_router.get("/activity-feed")
+async def get_activity_feed():
+    activities = await db.activity_feed.find({}, {"_id": 0}).sort("created_at", -1).limit(20).to_list(20)
+    return activities
+
+@api_router.post("/reviews/{review_id}/sparkle")
+async def sparkle_review(review_id: str, user: User = Depends(require_user)):
+    existing = await db.review_likes.find_one({"user_id": user.user_id, "review_id": review_id})
+    if existing:
+        await db.review_likes.delete_one({"user_id": user.user_id, "review_id": review_id})
+        return {"sparkled": False}
+    
+    await db.review_likes.insert_one({
+        "user_id": user.user_id,
+        "review_id": review_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"sparkled": True}
+
+@api_router.get("/reviews/{product_id}")
+async def get_product_reviews(product_id: str, user: Optional[User] = Depends(get_current_user)):
+    reviews = await db.reviews.find({"product_id": product_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Add sparkle counts and user status
+    for review in reviews:
+        review["sparkles"] = await db.review_likes.count_documents({"review_id": review["review_id"]})
+        if user:
+            review["is_sparkled"] = await db.review_likes.find_one({"user_id": user.user_id, "review_id": review["review_id"]}) is not None
+        else:
+            review["is_sparkled"] = False
+            
+    return reviews
+
+@api_router.get("/user/profile/{user_id}")
+async def get_public_profile(user_id: str):
+    user_data = await db.users.find_one(
+        {"user_id": user_id}, 
+        {"user_id": 1, "name": 1, "picture": 1, "xp": 1, "level": 1, "achievements": 1, "created_at": 1, "_id": 0}
+    )
+    if not user_data:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    return user_data
 # ==================== SEED DATA ====================
 
 @api_router.post("/migrate-translations")
