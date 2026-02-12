@@ -4,7 +4,8 @@ import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ordersAPI } from '../lib/api';
+import { ordersAPI, gamificationAPI } from '../lib/api';
+import { toast } from 'sonner';
 import { Wallet, Sparkles, Gift, ShoppingBag, Calendar, Trophy, Settings, Truck, Eye, Clock, CheckCircle, Package, MapPin, XCircle, CreditCard } from 'lucide-react';
 
 export const Profile = () => {
@@ -14,6 +15,7 @@ export const Profile = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeThemeId, setActiveThemeId] = useState('default');
+  const [claimingBonus, setClaimingBonus] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -46,6 +48,21 @@ export const Profile = () => {
     };
     fetchTheme();
   }, [isAuthenticated, navigate]);
+
+
+  const handleClaimBonus = async () => {
+    setClaimingBonus(true);
+    try {
+      const res = await gamificationAPI.claimDailyBonus();
+      toast.success(res.data.message);
+      // Refresh user data (this would ideally be done via context)
+      window.location.reload();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to claim bonus');
+    } finally {
+      setClaimingBonus(false);
+    }
+  };
 
   if (!isAuthenticated || !user) return null;
 
@@ -91,9 +108,21 @@ export const Profile = () => {
               </div>
             </div>
 
+
             {/* Info */}
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-bold" data-testid="profile-name">{user.name}</h1>
+              <div className="flex flex-col md:flex-row md:items-center gap-4 mb-2">
+                <h1 className="text-3xl font-bold" data-testid="profile-name">{user.name}</h1>
+                <Button 
+                  onClick={handleClaimBonus} 
+                  disabled={claimingBonus}
+                  size="sm"
+                  className="rounded-full bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  {t('profile.claimBonus')}
+                </Button>
+              </div>
               <p className="text-muted-foreground" data-testid="profile-email">{user.email}</p>
               
               {/* Level Progress */}
@@ -162,7 +191,39 @@ export const Profile = () => {
           )}
         </div>
 
-        {/* Order History */}
+        
+        {/* Achievements Section */}
+        {user.level >= 5 && (
+          <div className="tsmarket-card p-6 mb-8">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              {t('profile.achievements')}
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div className={`p-4 rounded-xl border-2 text-center ${user.achievements?.includes('pioneer') ? 'border-primary bg-primary/5' : 'border-muted opacity-50'}`}>
+                <div className="text-3xl mb-1">🚀</div>
+                <p className="font-bold text-xs">{t('profile.pioneer')}</p>
+              </div>
+              <div className={`p-4 rounded-xl border-2 text-center ${user.achievements?.includes('level_master') ? 'border-primary bg-primary/5' : 'border-muted opacity-50'}`}>
+                <div className="text-3xl mb-1">👑</div>
+                <p className="font-bold text-xs">{t('profile.levelMaster')}</p>
+              </div>
+              <div className={`p-4 rounded-xl border-2 text-center ${user.achievements?.includes('rich') ? 'border-primary bg-primary/5' : 'border-muted opacity-50'}`}>
+                <div className="text-3xl mb-1">💰</div>
+                <p className="font-bold text-xs">{t('profile.rich')}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {user.level < 5 && (
+          <div className="tsmarket-card p-6 mb-8 text-center opacity-70">
+            <Trophy className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="font-bold">{t('profile.achievements')}</p>
+            <p className="text-xs text-muted-foreground">{t('profile.unlockedAtLevel5')}</p>
+          </div>
+        )}
+
+        {/* Order History %}
         <div className="tsmarket-card p-6" data-testid="order-history">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <ShoppingBag className="w-5 h-5" />
