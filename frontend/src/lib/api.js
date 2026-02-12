@@ -202,4 +202,13 @@ export const seedAPI = {
   seed: () => api.post('/seed'),
 };
 
+
+// Gamification & Social API
+export const gamificationAPI = {
+  claimDailyBonus: () => api.post('/user/daily-bonus'),
+  getLeaderboard: () => api.get('/leaderboard'),
+  getActivityFeed: () => api.get('/activity-feed'),
+  getPublicProfile: (userId) => api.get(`/user/profile/${userId}`),
+  sparkleReview: (reviewId) => api.post(`/reviews/${reviewId}/sparkle`),
+};
 export default api;
