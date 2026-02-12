@@ -23,7 +23,6 @@ import { OrderTracking } from './pages/OrderTracking';
 import { Missions } from './pages/Missions';
 import { PublicProfile } from './pages/PublicProfile';
 import './App.css';
-
 // Protected Route for Delivery
 const DeliveryRoute = ({ children }) => {
   const { user, isAuthenticated, loading } = useAuth();
@@ -37,7 +36,6 @@ const DeliveryRoute = ({ children }) => {
   
   return children;
 };
-
 // Component to restrict access for delivery personnel
 const NonDeliveryRoute = ({ children }) => {
   const { user, isAuthenticated, loading } = useAuth();
