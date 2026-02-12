@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
-import { productsAPI, reviewsAPI } from '../lib/api';
+import { productsAPI, reviewsAPI, gamificationAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -92,6 +92,30 @@ export const ProductDetail = () => {
     addItem(product, quantity, selectedSize || null, selectedColor || null, customRequest || null);
     toast.success(`${getLocalizedText(product, 'name', lang)} ${lang === 'ru' ? 'добавлен в корзину!' : 'ба сабад илова шуд!'}`);
     setCustomRequest('');
+  };
+
+
+  const handleSparkle = async (reviewId) => {
+    if (!isAuthenticated) {
+      toast.error(t('product.pleaseLogin'));
+      return;
+    }
+    try {
+      const res = await gamificationAPI.sparkleReview(reviewId);
+      // Update local state
+      setReviews(prev => prev.map(rev => {
+        if (rev.review_id === reviewId) {
+          return {
+            ...rev,
+            is_sparkled: res.data.sparkled,
+            sparkles: res.data.sparkled ? (rev.sparkles || 0) + 1 : Math.max(0, (rev.sparkles || 0) - 1)
+          };
+        }
+        return rev;
+      }));
+    } catch (error) {
+      console.error('Failed to sparkle review:', error);
+    }
   };
 
   const handleSubmitReview = async (e) => {
