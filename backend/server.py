@@ -1936,6 +1936,13 @@ async def get_all_users(user: User = Depends(require_helper_or_admin)):
 
 @api_router.put("/admin/users/{user_id}/admin")
 async def toggle_admin(user_id: str, is_admin: bool, user: User = Depends(require_admin)):
+    # Prevent modifying other admins if current user is just a regular admin
+    target_user = await db.users.find_one({"user_id": user_id})
+    if target_user and (target_user.get("is_admin") or target_user.get("role") == "admin") and user_id != user.user_id:
+        # Only allow if the current user is the super admin or if we implement a hierarchy
+        # For now, let's just prevent admins from de-admining each other unless it's themselves
+        raise HTTPException(status_code=403, detail="Нельзя изменять статус администратора другого администратора")
+
     result = await db.users.update_one(
         {"user_id": user_id},
         {"$set": {"is_admin": is_admin}}
@@ -2167,6 +2174,12 @@ async def reject_topup_request(request_id: str, note: str = "", user: User = Dep
 async def delete_user(user_id: str, user: User = Depends(require_admin)):
     if user_id == user.user_id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    # Check if target is admin
+    target_user = await db.users.find_one({"user_id": user_id})
+    if target_user and (target_user.get("is_admin") or target_user.get("role") == "admin"):
+        raise HTTPException(status_code=403, detail="Нельзя удалить администратора")
+
     result = await db.users.delete_one({"user_id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
@@ -2177,6 +2190,11 @@ async def delete_user(user_id: str, user: User = Depends(require_admin)):
 # Update user balance (admin)
 @api_router.put("/admin/users/{user_id}/balance")
 async def update_user_balance(user_id: str, balance: float, user: User = Depends(require_admin)):
+    # Check if target is admin
+    target_user = await db.users.find_one({"user_id": user_id})
+    if target_user and (target_user.get("is_admin") or target_user.get("role") == "admin") and user_id != user.user_id:
+        raise HTTPException(status_code=403, detail="Нельзя изменять баланс другого администратора")
+
     result = await db.users.update_one(
         {"user_id": user_id},
         {"$set": {"balance": balance}}
@@ -2188,6 +2206,11 @@ async def update_user_balance(user_id: str, balance: float, user: User = Depends
 # Update user XP/Level (admin)
 @api_router.put("/admin/users/{user_id}/xp")
 async def update_user_xp(user_id: str, xp: int, user: User = Depends(require_admin)):
+    # Check if target is admin
+    target_user = await db.users.find_one({"user_id": user_id})
+    if target_user and (target_user.get("is_admin") or target_user.get("role") == "admin") and user_id != user.user_id:
+        raise HTTPException(status_code=403, detail="Нельзя изменять XP другого администратора")
+
     new_level = calculate_level(xp)
     result = await db.users.update_one(
         {"user_id": user_id},
@@ -2615,6 +2638,10 @@ async def update_user_role(user_id: str, role: str, user: User = Depends(require
     if not target_user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     
+    # Protection: Prevent changing role of an admin
+    if (target_user.get("is_admin") or target_user.get("role") == "admin") and user_id != user.user_id:
+        raise HTTPException(status_code=403, detail="Нельзя изменять роль другого администратора")
+
     update_data = {"role": role}
     if role == "admin":
         update_data["is_admin"] = True
