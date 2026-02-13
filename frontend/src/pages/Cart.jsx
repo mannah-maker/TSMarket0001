@@ -23,14 +23,24 @@ export const Cart = () => {
   const [promoValid, setPromoValid] = React.useState(false);
   const [promoLoading, setPromoLoading] = React.useState(false);
 
+  // Check if user is in TOP 10 (this would ideally come from the user object or a separate API call)
+  // For the frontend display, we'll assume the user knows if they are in TOP 10 or we can check their rank if available
+  const isTop10 = user?.is_top_10 || false; // We'll need to ensure the backend provides this or the frontend calculates it
+
   // Level discount (1% per level, max 15%)
-  const levelDiscount = Math.min(user?.level || 1, 15);
+  let levelDiscount = Math.min(user?.level || 1, 15);
+  let currentPromoDiscount = promoDiscount;
+
+  if (isTop10) {
+    levelDiscount *= 2;
+    currentPromoDiscount *= 2;
+  }
   
   // Calculate totals with discounts
   const subtotal = total;
   const levelDiscountAmount = subtotal * (levelDiscount / 100);
   const afterLevelDiscount = subtotal - levelDiscountAmount;
-  const promoDiscountAmount = afterLevelDiscount * (promoDiscount / 100);
+  const promoDiscountAmount = afterLevelDiscount * (currentPromoDiscount / 100);
   const finalTotal = Math.round((afterLevelDiscount - promoDiscountAmount) * 100) / 100;
   const totalSaved = Math.round((levelDiscountAmount + promoDiscountAmount) * 100) / 100;
 
@@ -249,6 +259,16 @@ export const Cart = () => {
                 </div>
                 
                 <div className="space-y-3 mb-4">
+                  {isTop10 && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-xl mb-4 flex items-center gap-2">
+                      <Trophy className="w-5 h-5 text-yellow-600" />
+                      <div>
+                        <p className="font-bold text-yellow-800">TOP 10 BONUS!</p>
+                        <p className="text-xs text-yellow-700">Ваши скидки удвоены!</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('cart.items')} ({items.length})</span>
                     <span className="font-bold">{subtotal}</span>
@@ -258,21 +278,21 @@ export const Cart = () => {
                   {levelDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span className="flex items-center gap-1">
-                        <Tag className="w-4 h-4" />
+                        <Trophy className="w-4 h-4" />
                         {t('cart.levelDiscount')} ({levelDiscount}%)
                       </span>
-                      <span className="font-bold">-{levelDiscountAmount.toFixed(0)}</span>
+                      <span className="font-bold">-{levelDiscountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   
                   {/* Promo Discount */}
-                  {promoValid && promoDiscount > 0 && (
+                  {promoValid && (
                     <div className="flex justify-between text-green-600">
                       <span className="flex items-center gap-1">
-                        <CheckCircle className="w-4 h-4" />
-                        {t('cart.promoDiscount')} ({promoDiscount}%)
+                        <Tag className="w-4 h-4" />
+                        {t('cart.promoCode')} ({currentPromoDiscount}%)
                       </span>
-                      <span className="font-bold">-{promoDiscountAmount.toFixed(0)}</span>
+                      <span className="font-bold">-{promoDiscountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   
