@@ -1235,6 +1235,85 @@ export const Admin = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
+            {/* Daily Bonus Settings */}
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2 text-orange-500">
+                <Gift className="w-5 h-5" />
+                Настройки ежедневного бонуса
+              </h3>
+              <p className="text-sm text-slate-400 mb-6">
+                Укажите количество монет и XP, которые пользователи будут получать каждый день.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <Label>Монеты за вход</Label>
+                  <Input
+                    type="number"
+                    value={adminSettings.daily_bonus_coins}
+                    onChange={(e) => setAdminSettings({...adminSettings, daily_bonus_coins: parseFloat(e.target.value)})}
+                    className="admin-input"
+                    placeholder="10.0"
+                  />
+                </div>
+                <div>
+                  <Label>XP за вход</Label>
+                  <Input
+                    type="number"
+                    value={adminSettings.daily_bonus_xp}
+                    onChange={(e) => setAdminSettings({...adminSettings, daily_bonus_xp: parseInt(e.target.value)})}
+                    className="admin-input"
+                    placeholder="50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* TOP 10 Rewards Settings */}
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2 text-yellow-500">
+                <Trophy className="w-5 h-5" />
+                Настройки наград ТОП-10
+              </h3>
+              <p className="text-sm text-slate-400 mb-6">
+                Укажите награды, которые будут отображаться в лидерборде для первых 10 мест.
+                <br />
+                <span className="text-orange-400 font-bold">Примечание:</span> Скидки для ТОП-10 удваиваются автоматически.
+              </p>
+              
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                {[...Array(10)].map((_, i) => {
+                  const rank = i + 1;
+                  const reward = adminSettings.top_rewards?.find(r => r.rank === rank) || { rank, reward_text: '', coins: 0, xp: 0 };
+                  
+                  return (
+                    <div key={rank} className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 flex flex-col md:flex-row gap-4 items-end">
+                      <div className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-slate-700 font-bold text-primary border border-slate-600">
+                        {rank}
+                      </div>
+                      <div className="flex-1 w-full">
+                        <Label className="text-[10px] uppercase text-slate-500">Текст награды (напр. "iPhone 16")</Label>
+                        <Input
+                          value={reward.reward_text}
+                          onChange={(e) => {
+                            const newRewards = [...(adminSettings.top_rewards || [])];
+                            const idx = newRewards.findIndex(r => r.rank === rank);
+                            if (idx > -1) {
+                              newRewards[idx] = { ...newRewards[idx], reward_text: e.target.value };
+                            } else {
+                              newRewards.push({ rank, reward_text: e.target.value, coins: 0, xp: 0 });
+                            }
+                            setAdminSettings({ ...adminSettings, top_rewards: newRewards });
+                          }}
+                          className="admin-input"
+                          placeholder="Награда за это место..."
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="admin-card" data-testid="card-settings">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <CreditCard className="w-5 h-5" />
