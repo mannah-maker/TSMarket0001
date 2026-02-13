@@ -397,7 +397,7 @@ class User(BaseModel):
 
 class UserPublic(BaseModel):
     user_id: str
-    email: str
+    email: EmailStr
     name: str
     picture: Optional[str] = None
     balance: float = 0.0
@@ -407,6 +407,7 @@ class UserPublic(BaseModel):
     role: str = "user"
     wheel_spins_available: int = 0
     claimed_rewards: List[int] = []
+    is_top_10: bool = False
 
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -622,6 +623,12 @@ class ShopThemeCreate(BaseModel):
     title_color: str
     tagline: str
 
+class TopReward(BaseModel):
+    rank: int  # 1 to 10
+    reward_text: str = ""
+    coins: float = 0.0
+    xp: int = 0
+
 class AdminSettings(BaseModel):
     model_config = ConfigDict(extra="ignore")
     settings_id: str = "admin_settings"
@@ -638,6 +645,7 @@ class AdminSettings(BaseModel):
     active_theme: str = "default"
     daily_bonus_coins: float = 10.0
     daily_bonus_xp: int = 50
+    top_rewards: List[TopReward] = Field(default_factory=lambda: [TopReward(rank=i, reward_text="") for i in range(1, 11)])
 
 class AdminSettingsUpdate(BaseModel):
     card_number: str
@@ -649,8 +657,9 @@ class AdminSettingsUpdate(BaseModel):
     support_phone: str = ""
     ai_auto_approve_enabled: bool = False
     active_theme: str = "default"
-    daily_bonus_coins: float = 10.0
-    daily_bonus_xp: int = 50
+    daily_bonus_coins: Optional[float] = None
+    daily_bonus_xp: Optional[int] = None
+    top_rewards: Optional[List[TopReward]] = None
 
 class Reward(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1197,7 +1206,14 @@ async def get_reviews_for_product(product_id: str):
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_user)):
-    return UserPublic(**user.model_dump())
+    user_data = user.model_dump()
+    
+    # Check if user is in TOP 10
+    top_users = await db.users.find({}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
+    top_user_ids = [u["user_id"] for u in top_users]
+    user_data["is_top_10"] = user.user_id in top_user_ids
+    
+    return UserPublic(**user_data)
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
@@ -1409,6 +1425,14 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     
     # Calculate level discount (1% per level, max 15%)
     level_discount_percent = min(user_level, 15)
+
+    # Check if user is in TOP 10 for discount doubling
+    is_top_10 = False
+    top_users = await db.users.find({}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
+    top_user_ids = [u["user_id"] for u in top_users]
+    if user.user_id in top_user_ids:
+        is_top_10 = True
+        level_discount_percent *= 2
     
     # Check promo code
     promo_discount_percent = 0.0
@@ -1420,6 +1444,8 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
         if promo:
             if promo.get("usage_limit", 0) == 0 or promo.get("times_used", 0) < promo.get("usage_limit", 0):
                 promo_discount_percent = promo.get("discount_percent", 0)
+                if is_top_10:
+                    promo_discount_percent *= 2
                 # Update promo usage
                 await db.promo_codes.update_one(
                     {"code": promo_code.upper()},
@@ -1448,7 +1474,9 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
         # Calculate price with product discount
         base_price = product["price"]
         product_discount = product.get("discount_percent", 0)
-        price_after_product_discount = base_price * (1 - product_discount / 100)
+        if is_top_10:
+            product_discount *= 2
+        price_after_product_discount = base_price * (1 - min(product_discount, 100) / 100)
         
         item_total = price_after_product_discount * item.quantity
         item_xp = product["xp_reward"] * item.quantity
@@ -2979,6 +3007,18 @@ async def get_leaderboard():
         {}, 
         {"user_id": 1, "name": 1, "picture": 1, "xp": 1, "level": 1, "_id": 0}
     ).sort("xp", -1).limit(10).to_list(10)
+    
+    # Add top rewards info
+    settings = await db.admin_settings.find_one({"settings_id": "admin_settings"})
+    top_rewards = settings.get("top_rewards", []) if settings else []
+    
+    # Map rewards to users
+    for i, user in enumerate(users):
+        rank = i + 1
+        reward = next((r for r in top_rewards if r.get("rank") == rank), None)
+        if reward:
+            user["top_reward"] = reward
+            
     return users
 
 @api_router.get("/activity-feed")
