@@ -333,11 +333,22 @@ export const Home = () => {
                       </div>
                       <div>
                         <p className="font-bold">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">Lvl {user.level}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground">Lvl {user.level}</p>
+                          {user.top_reward?.reward_text && (
+                            <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1">
+                              <Gift className="w-2 h-2" />
+                              {user.top_reward.reward_text}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-black text-primary">{user.xp} XP</p>
+                      {index < 10 && (
+                        <p className="text-[10px] text-orange-500 font-bold uppercase">2x Discount</p>
+                      )}
                     </div>
                   </div>
                 ))}
