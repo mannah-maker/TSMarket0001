@@ -128,7 +128,15 @@ export const Profile = () => {
               {/* Level Progress */}
               <div className="mt-4">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="font-bold">{t('common.level')} {user.level}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">{t('common.level')} {user.level}</span>
+                    {user.xp_multiplier_expires_at && new Date(user.xp_multiplier_expires_at) > new Date() && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[10px] font-black rounded-full animate-pulse border border-yellow-200">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        XP x2
+                      </span>
+                    )}
+                  </div>
                   <span className="text-muted-foreground">
                     {xpInCurrentLevel} / {xpNeededForLevel} XP
                   </span>
@@ -137,6 +145,12 @@ export const Profile = () => {
                 <p className="text-xs text-muted-foreground mt-1">
                   {xpNeededForLevel - xpInCurrentLevel} {t('profile.xpToNext')} {user.level + 1}
                 </p>
+                {user.xp_multiplier_expires_at && new Date(user.xp_multiplier_expires_at) > new Date() && (
+                  <p className="text-[10px] text-yellow-600 font-medium mt-1">
+                    {lang === 'ru' ? 'Бонус XP x2 активен до: ' : 'XP x2 bonus active until: '}
+                    {new Date(user.xp_multiplier_expires_at).toLocaleDateString()}
+                  </p>
+                )}
               </div>
             </div>
 
