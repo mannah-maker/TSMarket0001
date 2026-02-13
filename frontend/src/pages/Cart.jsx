@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ordersAPI, promoAPI } from '../lib/api';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Wallet, Sparkles, ShoppingBag, MapPin, Phone, Clock, Tag, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Wallet, Sparkles, ShoppingBag, MapPin, Phone, Clock, Tag, CheckCircle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const Cart = () => {
@@ -15,13 +15,13 @@ export const Cart = () => {
   const { user, isAuthenticated, refreshUser } = useAuth();
   const { items, removeItem, updateQuantity, clearCart, total, totalXP } = useCart();
   const { t } = useLanguage();
-  const [loading, setLoading] = React.useState(false);
-  const [deliveryAddress, setDeliveryAddress] = React.useState('');
-  const [phoneNumber, setPhoneNumber] = React.useState('');
-  const [promoCode, setPromoCode] = React.useState('');
-  const [promoDiscount, setPromoDiscount] = React.useState(0);
-  const [promoValid, setPromoValid] = React.useState(false);
-  const [promoLoading, setPromoLoading] = React.useState(false);
+  const [loading, setLoading] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoValid, setPromoValid] = useState(false);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   // Check if user is in TOP 10 (this would ideally come from the user object or a separate API call)
   // For the frontend display, we'll assume the user knows if they are in TOP 10 or we can check their rank if available
@@ -281,162 +281,137 @@ export const Cart = () => {
                         <Trophy className="w-4 h-4" />
                         {t('cart.levelDiscount')} ({levelDiscount}%)
                       </span>
-                      <span className="font-bold">-{levelDiscountAmount.toFixed(2)}</span>
+                      <span className="font-bold">-{levelDiscountAmount}</span>
                     </div>
                   )}
-                  
-                  {/* Promo Discount */}
-                  {promoValid && (
-                    <div className="flex justify-between text-green-600">
-                      <span className="flex items-center gap-1">
-                        <Tag className="w-4 h-4" />
-                        {t('cart.promoCode')} ({currentPromoDiscount}%)
-                      </span>
-                      <span className="font-bold">-{promoDiscountAmount.toFixed(2)}</span>
+
+                  {/* Promo Code */}
+                  <div className="pt-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder={t('cart.promoCode')}
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        className="h-9"
+                        disabled={promoValid || promoLoading}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={validatePromo}
+                        disabled={!promoCode || promoValid || promoLoading}
+                      >
+                        {promoLoading ? <Clock className="w-4 h-4 animate-spin" /> : t('cart.apply')}
+                      </Button>
                     </div>
-                  )}
-                  
-                  {/* Total Saved */}
-                  {totalSaved > 0 && (
-                    <div className="p-2 bg-green-50 rounded-lg text-center">
-                      <span className="text-green-700 font-bold">{t('cart.youSave')}: {totalSaved}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between text-primary">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="w-4 h-4" />
-                      {t('cart.xpToEarn')}
-                    </span>
-                    <span className="font-bold">+{totalXP}</span>
+                    {promoValid && (
+                      <div className="flex justify-between text-green-600 mt-2 text-sm">
+                        <span className="flex items-center gap-1">
+                          <Tag className="w-3 h-3" />
+                          {t('cart.promoDiscount')} ({promoDiscount}%)
+                        </span>
+                        <span className="font-bold">-{promoDiscountAmount}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="border-t border-border pt-3">
-                    <div className="flex justify-between text-xl">
-                      <span className="font-bold">{t('cart.total')}</span>
-                      <span className="font-black text-primary">{finalTotal}</span>
+
+                  <div className="border-t pt-3 flex justify-between items-end">
+                    <span className="font-bold">{t('cart.total')}</span>
+                    <div className="text-right">
+                      {totalSaved > 0 && (
+                        <p className="text-xs text-green-600 font-medium mb-1">
+                          {t('cart.saved')} {totalSaved}
+                        </p>
+                      )}
+                      <span className="text-3xl font-black text-primary leading-none">
+                        {finalTotal}
+                      </span>
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-center gap-1 text-primary font-bold bg-primary/5 py-2 rounded-lg">
+                    <Sparkles className="w-4 h-4" />
+                    <span>+ {totalXP} XP</span>
                   </div>
                 </div>
 
-                {/* Promo Code */}
-                <div className="mb-4">
-                  <label className="text-sm font-bold mb-2 flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-primary" />
-                    {t('cart.promoCode')}
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={promoCode}
-                      onChange={(e) => {
-                        setPromoCode(e.target.value.toUpperCase());
-                        setPromoValid(false);
-                        setPromoDiscount(0);
-                      }}
-                      placeholder={t('cart.enterPromo')}
-                      className="tsmarket-input flex-1"
-                      disabled={promoValid}
-                      data-testid="promo-input"
-                    />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      {t('cart.deliveryAddress')}
+                    </Label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                      <Textarea
+                        placeholder={t('cart.addressPlaceholder')}
+                        className="pl-9 min-h-[80px] resize-none"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase text-muted-foreground">
+                      {t('cart.phoneNumber')}
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="tel"
+                        placeholder="+992 XXX XX XX XX"
+                        className="pl-9"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">{t('cart.yourBalance')}</span>
+                      <span className={`font-bold ${insufficientBalance ? 'text-destructive' : ''}`}>
+                        {user?.balance || 0}
+                      </span>
+                    </div>
+                    
                     <Button
-                      type="button"
-                      variant={promoValid ? "outline" : "default"}
-                      onClick={() => {
-                        if (promoValid) {
-                          setPromoCode('');
-                          setPromoValid(false);
-                          setPromoDiscount(0);
-                        } else {
-                          validatePromo();
-                        }
-                      }}
-                      disabled={promoLoading || (!promoValid && !promoCode.trim())}
-                      className="rounded-full"
+                      className="w-full tsmarket-btn-primary h-12 rounded-xl text-lg font-bold"
+                      onClick={handleCheckout}
+                      disabled={loading || items.length === 0}
+                      data-testid="checkout-btn"
                     >
-                      {promoValid ? t('cart.remove') : t('cart.apply')}
+                      {loading ? (
+                        <Clock className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Wallet className="w-5 h-5 mr-2" />
+                          {t('cart.checkout')}
+                        </>
+                      )}
                     </Button>
-                  </div>
-                </div>
-
-                {/* Phone Number */}
-                <div className="mb-4">
-                  <label className="text-sm font-bold mb-2 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-primary" />
-                    {t('cart.phoneNumber')} *
-                  </label>
-                  <Input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="+992 XXX XX XX XX"
-                    className="tsmarket-input"
-                    data-testid="phone-input"
-                  />
-                </div>
-
-                {/* Delivery Address */}
-                <div className="mb-4">
-                  <label className="text-sm font-bold mb-2 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    {t('cart.deliveryAddress')} *
-                  </label>
-                  <Textarea
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder={t('cart.addressPlaceholder')}
-                    className="tsmarket-input min-h-[80px]"
-                    data-testid="delivery-address"
-                  />
-                </div>
-
-                {/* Balance Info */}
-                {isAuthenticated && (
-                  <div className={`p-3 rounded-xl mb-4 ${insufficientBalance ? 'bg-destructive/10' : 'bg-primary/10'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Wallet className="w-4 h-4" />
-                        {t('cart.yourBalance')}
-                      </span>
-                      <span className={`font-bold ${insufficientBalance ? 'text-destructive' : 'text-primary'}`}>
-                        {user?.balance?.toFixed(0) || 0}
-                      </span>
-                    </div>
+                    
                     {insufficientBalance && (
-                      <p className="text-xs text-destructive mt-2">
-                        {t('cart.needMore')} {(finalTotal - (user?.balance || 0)).toFixed(0)} {t('cart.moreCoins')}
-                      </p>
+                      <Link to="/topup">
+                        <Button variant="link" className="w-full text-primary font-bold mt-2">
+                          {t('cart.topUpNow')}
+                        </Button>
+                      </Link>
                     )}
                   </div>
-                )}
-
-                {insufficientBalance ? (
-                  <Link to="/topup">
-                    <Button className="w-full tsmarket-btn-secondary rounded-full py-6" data-testid="topup-btn">
-                      <Wallet className="w-5 h-5 mr-2" />
-                      {t('cart.topUpBalance')}
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button
-                    className="w-full tsmarket-btn-primary rounded-full py-6"
-                    onClick={handleCheckout}
-                    disabled={loading || items.length === 0 || !deliveryAddress.trim() || !phoneNumber.trim()}
-                    data-testid="checkout-btn"
-                  >
-                    {loading ? (
-                      <span className="loading-spinner" />
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-5 h-5 mr-2" />
-                        {t('cart.checkout')}
-                      </>
-                    )}
-                  </Button>
-                )}
-                <Link to="/catalog">
-                  <Button variant="ghost" className="w-full mt-4" data-testid="continue-shopping-btn">
-                    {t('cart.continueShopping')}
-                  </Button>
-                </Link>
+                </div>
+              </div>
+              
+              <div className="mt-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">{t('cart.securePayment')}</p>
+                    <p className="text-xs text-muted-foreground">{t('cart.securePaymentDesc')}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -445,3 +420,5 @@ export const Cart = () => {
     </div>
   );
 };
+
+export default Cart;
