@@ -393,6 +393,7 @@ class User(BaseModel):
     claimed_rewards: List[int] = []
     last_bonus_claim: Optional[datetime] = None
     achievements: List[str] = []
+    xp_multiplier_expires_at: Optional[datetime] = None
     created_at: datetime
 
 class UserPublic(BaseModel):
@@ -408,6 +409,7 @@ class UserPublic(BaseModel):
     wheel_spins_available: int = 0
     claimed_rewards: List[int] = []
     is_top_10: bool = False
+    xp_multiplier_expires_at: Optional[datetime] = None
 
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1538,8 +1540,21 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     # Remove MongoDB _id from response
     order_dict.pop("_id", None)
     
+    # Check for XP multiplier
+    xp_multiplier = 1
+    xp_expires = current_user.get("xp_multiplier_expires_at")
+    if xp_expires:
+        if isinstance(xp_expires, str):
+            xp_expires = datetime.fromisoformat(xp_expires)
+        if xp_expires.tzinfo is None:
+            xp_expires = xp_expires.replace(tzinfo=timezone.utc)
+        if xp_expires > datetime.now(timezone.utc):
+            xp_multiplier = 2
+    
+    actual_xp_gained = total_xp * xp_multiplier
+
     # Update user balance and XP
-    new_xp = current_user["xp"] + total_xp
+    new_xp = current_user["xp"] + actual_xp_gained
     old_level = current_user["level"]
     new_level = calculate_level(new_xp)
     
@@ -1547,14 +1562,21 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     levels_gained = new_level - old_level
     new_spins = current_user.get("wheel_spins_available", 0) + levels_gained
     
+    update_data = {
+        "balance": current_user["balance"] - total,
+        "xp": new_xp,
+        "level": new_level,
+        "wheel_spins_available": new_spins
+    }
+    
+    # If leveled up, set/extend XP multiplier for 30 days
+    if new_level > old_level:
+        multiplier_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+        update_data["xp_multiplier_expires_at"] = multiplier_expiry.isoformat()
+    
     await db.users.update_one(
         {"user_id": user.user_id},
-        {"$set": {
-            "balance": current_user["balance"] - total,
-            "xp": new_xp,
-            "level": new_level,
-            "wheel_spins_available": new_spins
-        }}
+        {"$set": update_data}
     )
     
     # Update mission progress
@@ -1564,7 +1586,7 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     
     return {
         "order": order_dict,
-        "xp_gained": total_xp,
+        "xp_gained": actual_xp_gained,
         "new_level": new_level,
         "level_up": new_level > old_level,
         "discount_applied": total_discount
@@ -1834,7 +1856,16 @@ async def spin_wheel(user: User = Depends(require_user)):
     if selected_prize["prize_type"] == "coins":
         update_ops["$inc"]["balance"] = selected_prize["value"]
     elif selected_prize["prize_type"] == "xp":
-        update_ops["$inc"]["xp"] = int(selected_prize["value"])
+        # Check for XP multiplier
+        xp_multiplier = 1
+        xp_expires = user.xp_multiplier_expires_at
+        if xp_expires:
+            if xp_expires.tzinfo is None:
+                xp_expires = xp_expires.replace(tzinfo=timezone.utc)
+            if xp_expires > datetime.now(timezone.utc):
+                xp_multiplier = 2
+        
+        update_ops["$inc"]["xp"] = int(selected_prize["value"]) * xp_multiplier
         # Level will be updated on next action or login
     
     # Ensure user has spins available during update
@@ -2982,10 +3013,21 @@ async def claim_daily_bonus(user: User = Depends(require_user)):
     coins = settings.get("daily_bonus_coins", 10.0) if settings else 10.0
     xp = settings.get("daily_bonus_xp", 50) if settings else 50
     
+    # Check for XP multiplier
+    xp_multiplier = 1
+    xp_expires = user.xp_multiplier_expires_at
+    if xp_expires:
+        if xp_expires.tzinfo is None:
+            xp_expires = xp_expires.replace(tzinfo=timezone.utc)
+        if xp_expires > datetime.now(timezone.utc):
+            xp_multiplier = 2
+            
+    actual_xp = xp * xp_multiplier
+    
     await db.users.update_one(
         {"user_id": user.user_id},
         {
-            "$inc": {"balance": coins, "xp": xp},
+            "$inc": {"balance": coins, "xp": actual_xp},
             "$set": {"last_bonus_claim": datetime.now(timezone.utc).isoformat()}
         }
     )
@@ -2994,7 +3036,14 @@ async def claim_daily_bonus(user: User = Depends(require_user)):
     updated_user = await db.users.find_one({"user_id": user.user_id})
     new_level = calculate_level(updated_user["xp"])
     if new_level > updated_user["level"]:
-        await db.users.update_one({"user_id": user.user_id}, {"$set": {"level": new_level}})
+        multiplier_expiry = datetime.now(timezone.utc) + timedelta(days=30)
+        await db.users.update_one(
+            {"user_id": user.user_id}, 
+            {"$set": {
+                "level": new_level,
+                "xp_multiplier_expires_at": multiplier_expiry.isoformat()
+            }}
+        )
         await log_activity(user.user_id, user.name, "level_up", f"достиг {new_level} уровня!")
     
     await check_achievements(user.user_id)
