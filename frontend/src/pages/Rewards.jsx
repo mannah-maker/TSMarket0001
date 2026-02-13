@@ -107,6 +107,12 @@ export const Rewards = () => {
             <p className="text-muted-foreground">
               You have <span className="font-bold text-primary">{user?.wheel_spins_available || 0}</span> spins available
             </p>
+            {user?.xp_multiplier_expires_at && new Date(user.xp_multiplier_expires_at) > new Date() && (
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-black rounded-full border border-yellow-200 animate-pulse">
+                <Sparkles className="w-3 h-3" />
+                XP x2 ACTIVE!
+              </div>
+            )}
           </div>
 
           {Array.isArray(wheelPrizes) && wheelPrizes.length > 0 && (
