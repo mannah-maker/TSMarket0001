@@ -26,7 +26,8 @@ export const Cart = () => {
 
   // Check if user is in TOP 10 (this would ideally come from the user object or a separate API call)
   // For the frontend display, we'll assume the user knows if they are in TOP 10 or we can check their rank if available
-  const isTop10 = user?.is_top_10 || false; // We'll need to ensure the backend provides this or the frontend calculates it
+  // Check if user is in TOP 10 (admins never count as TOP 10)
+  const isTop10 = !user?.is_admin && user?.role !== 'admin' && (user?.is_top_10 || false);
 
   // Level discount (1% per level, max 15%)
   let levelDiscount = Math.min(user?.level || 1, 15);
