@@ -1211,7 +1211,7 @@ async def get_me(user: User = Depends(require_user)):
     user_data = user.model_dump()
     
     # Check if user is in TOP 10
-    top_users = await db.users.find({}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
+    top_users = await db.users.find({"is_admin": False, "role": {"$ne": "admin"}}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
     top_user_ids = [u["user_id"] for u in top_users]
     user_data["is_top_10"] = user.user_id in top_user_ids
     
@@ -1430,7 +1430,7 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
 
     # Check if user is in TOP 10 for discount doubling
     is_top_10 = False
-    top_users = await db.users.find({}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
+    top_users = await db.users.find({"is_admin": False, "role": {"$ne": "admin"}}, {"user_id": 1}).sort("xp", -1).limit(10).to_list(10)
     top_user_ids = [u["user_id"] for u in top_users]
     if user.user_id in top_user_ids:
         is_top_10 = True
@@ -3053,7 +3053,7 @@ async def claim_daily_bonus(user: User = Depends(require_user)):
 @api_router.get("/leaderboard")
 async def get_leaderboard():
     users = await db.users.find(
-        {}, 
+        {"is_admin": False, "role": {"$ne": "admin"}}, 
         {"user_id": 1, "name": 1, "picture": 1, "xp": 1, "level": 1, "_id": 0}
     ).sort("xp", -1).limit(10).to_list(10)
     
