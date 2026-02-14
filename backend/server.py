@@ -236,7 +236,7 @@ async def analyze_receipt_with_ai(receipt_image_url: str, expected_amount: float
 2. Ответь ТОЛЬКО в формате JSON: {"amount": число_или_null, "confidence": "high/medium/low", "found": true/false}
 3. Если сумму определить невозможно или изображение некачественное, верни {"amount": null, "confidence": "low", "found": false}
 4. Не добавляй никакого дополнительного текста, только JSON"""
-        ).with_model("openai", "gpt-5.1")
+        ).with_model("openai", "gpt-4o")
         
         # Create message with image
         image_content = ImageContent(image_base64=image_base64)
