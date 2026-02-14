@@ -27,7 +27,19 @@ export const PublicProfile = () => {
   }, [userId]);
 
   if (loading) return <div className="min-h-screen tsmarket-gradient flex items-center justify-center">Loading...</div>;
-  if (!profile) return <div className="min-h-screen tsmarket-gradient flex items-center justify-center">User not found</div>;
+  
+  // Prevent viewing admin profiles
+  if (!profile || profile.is_admin || profile.role === 'admin') {
+    return (
+      <div className="min-h-screen tsmarket-gradient flex flex-col items-center justify-center p-4 text-center">
+        <h2 className="text-2xl font-bold mb-4">{t('common.error') || 'Error'}</h2>
+        <p className="text-muted-foreground mb-6">Этот профиль скрыт настройками приватности или не существует.</p>
+        <Button onClick={() => navigate('/')} className="rounded-full">
+          {t('product.backToHome') || 'Back to Home'}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen tsmarket-gradient py-8">
