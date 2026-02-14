@@ -94,7 +94,10 @@ export const Home = () => {
         setCategories(categoriesData);
         const leaderboardRes = await gamificationAPI.getLeaderboard().catch(() => ({ data: [] }));
         const activitiesRes = await gamificationAPI.getActivityFeed().catch(() => ({ data: [] }));
-        setLeaderboard(leaderboardRes.data || []);
+        
+        // Filter out admins from leaderboard
+        const filteredLeaderboard = (leaderboardRes.data || []).filter(u => !u.is_admin && u.role !== 'admin');
+        setLeaderboard(filteredLeaderboard);
         setActivities(activitiesRes.data || []);
 
 
