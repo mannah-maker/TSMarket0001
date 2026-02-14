@@ -30,7 +30,13 @@ export const Admin = () => {
   const [rewards, setRewards] = useState([]);
   const [wheelPrizes, setWheelPrizes] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [adminSettings, setAdminSettings] = useState({ card_number: '', card_holder: '', additional_info: '' });
+  const [adminSettings, setAdminSettings] = useState({ 
+    card_number: '', 
+    card_holder: '', 
+    additional_info: '',
+    daily_bonus_coins: 10,
+    daily_bonus_xp: 50
+  });
   const [promoCodes, setPromoCodes] = useState([]);
   const [missions, setMissions] = useState([]);
   const [tags, setTags] = useState([]);
@@ -1266,6 +1272,12 @@ export const Admin = () => {
                   />
                 </div>
               </div>
+              <Button 
+                onClick={handleSaveSettings} 
+                className="mt-6 tsmarket-btn-primary w-full md:w-auto"
+              >
+                Сохранить настройки бонуса
+              </Button>
             </div>
 
             {/* TOP 10 Rewards Settings */}
