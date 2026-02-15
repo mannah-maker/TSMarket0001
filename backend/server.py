@@ -2079,7 +2079,9 @@ async def update_admin_settings(data: AdminSettingsUpdate, user: User = Depends(
             "support_email": data.support_email,
             "support_phone": data.support_phone,
             "ai_auto_approve_enabled": data.ai_auto_approve_enabled,
-            "active_theme": data.active_theme
+            "active_theme": data.active_theme,
+            "daily_bonus_coins": data.daily_bonus_coins,
+            "daily_bonus_xp": data.daily_bonus_xp
         }},
         upsert=True
     )
