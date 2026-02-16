@@ -282,7 +282,7 @@ export const Home = () => {
                   data-testid={`product-${product.product_id}`}
                 >
                   <Link to={`/product/${product.product_id}`}>
-                    <div className="aspect-square overflow-hidden relative bg-muted">
+                    <div className="aspect-square overflow-hidden relative bg-muted cursor-pointer">
                       <ProductImage src={product.image_url} alt={product.name} />
                     </div>
                   </Link>
