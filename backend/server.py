@@ -551,12 +551,14 @@ class PromoCode(BaseModel):
     is_active: bool = True
     usage_limit: int = 0  # 0 = unlimited
     times_used: int = 0
+    expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PromoCodeCreate(BaseModel):
     code: str
     discount_percent: float
     usage_limit: int = 0
+    expires_at: Optional[datetime] = None
 
 class TopUpCode(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1941,8 +1943,20 @@ async def validate_promo_code(code: str, user: User = Depends(require_user)):
     if not promo:
         raise HTTPException(status_code=404, detail="Промокод не найден")
     
+    # Check usage limit
     if promo.get("usage_limit", 0) > 0 and promo.get("times_used", 0) >= promo.get("usage_limit", 0):
-        raise HTTPException(status_code=400, detail="Промокод больше недействителен")
+        raise HTTPException(status_code=400, detail="Промокод больше недействителен (исчерпан лимит)")
+    
+    # Check expiration date
+    expires_at = promo.get("expires_at")
+    if expires_at:
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if datetime.now(timezone.utc) > expires_at:
+            raise HTTPException(status_code=400, detail="Срок действия промокода истек")
     
     return {
         "valid": True,
@@ -1964,10 +1978,14 @@ async def create_promo_code(data: PromoCodeCreate, user: User = Depends(require_
     promo = PromoCode(
         code=data.code.upper(),
         discount_percent=data.discount_percent,
-        usage_limit=data.usage_limit
+        usage_limit=data.usage_limit,
+        expires_at=data.expires_at
     )
     promo_dict = promo.model_dump()
     promo_dict["created_at"] = promo_dict["created_at"].isoformat()
+    if promo_dict.get("expires_at"):
+        promo_dict["expires_at"] = promo_dict["expires_at"].isoformat()
+    
     await db.promo_codes.insert_one(promo_dict)
     promo_dict.pop("_id", None)
     return promo_dict
