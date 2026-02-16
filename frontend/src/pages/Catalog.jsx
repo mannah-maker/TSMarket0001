@@ -42,7 +42,7 @@ const ProductCard = React.memo(({ product }) => {
   return (
     <div className="tsmarket-card tsmarket-card-hover product-card group">
       <Link to={`/product/${product.product_id}`}>
-        <div className="aspect-square overflow-hidden relative bg-muted">
+        <div className="aspect-square overflow-hidden relative bg-muted cursor-pointer">
           {!imageLoaded && (
             <div className="absolute inset-0 animate-pulse bg-primary/10" />
           )}
