@@ -54,7 +54,7 @@ export const Admin = () => {
   const [newTopupCode, setNewTopupCode] = useState({ code: '', amount: 100 });
   const [newReward, setNewReward] = useState({ level_required: 1, name: '', description: '', reward_type: 'coins', value: 50, is_exclusive: false });
   const [newPrize, setNewPrize] = useState({ name: '', prize_type: 'coins', value: 10, probability: 0.2, color: '#0D9488' });
-  const [newPromoCode, setNewPromoCode] = useState({ code: '', discount_percent: 10, usage_limit: 0 });
+  const [newPromoCode, setNewPromoCode] = useState({ code: '', discount_percent: 10, usage_limit: 0, expires_at: '' });
   const [newMission, setNewMission] = useState({ title: '', description: '', mission_type: 'orders_count', target_value: 5, reward_type: 'coins', reward_value: 100, min_level: 1 });
   const [newTag, setNewTag] = useState({ name: '', slug: '', color: '#0D9488' });
   const [newBankCard, setNewBankCard] = useState({ card_number: '', card_holder: '', bank_name: '' });
@@ -661,9 +661,13 @@ export const Admin = () => {
       return;
     }
     try {
-      await adminAPI.createPromoCode(newPromoCode);
+      const promoData = {
+        ...newPromoCode,
+        expires_at: newPromoCode.expires_at ? new Date(newPromoCode.expires_at).toISOString() : null
+      };
+      await adminAPI.createPromoCode(promoData);
       toast.success('Промокод создан!');
-      setNewPromoCode({ code: '', discount_percent: 10, usage_limit: 0 });
+      setNewPromoCode({ code: '', discount_percent: 10, usage_limit: 0, expires_at: '' });
       fetchAllData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Ошибка создания промокода');
@@ -1663,6 +1667,15 @@ export const Admin = () => {
                     className="admin-input"
                   />
                 </div>
+                <div>
+                  <Label>Дата истечения (необязательно)</Label>
+                  <Input
+                    type="datetime-local"
+                    value={newPromoCode.expires_at}
+                    onChange={(e) => setNewPromoCode({...newPromoCode, expires_at: e.target.value})}
+                    className="admin-input"
+                  />
+                </div>
                 <div className="flex items-end">
                   <Button type="submit" className="w-full">Создать</Button>
                 </div>
@@ -1688,6 +1701,14 @@ export const Admin = () => {
                           <p className="text-sm text-slate-400">
                             -{promo.discount_percent}% • 
                             {promo.usage_limit > 0 ? ` ${promo.times_used || 0}/${promo.usage_limit} использований` : ' безлимит'}
+                            {promo.expires_at && (
+                              <>
+                                {' • '}
+                                <span className={new Date(promo.expires_at) < new Date() ? "text-red-400" : ""}>
+                                  До: {new Date(promo.expires_at).toLocaleString()}
+                                </span>
+                              </>
+                            )}
                           </p>
                         </div>
                       </div>
