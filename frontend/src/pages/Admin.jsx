@@ -1814,6 +1814,11 @@ export const Admin = () => {
                         <p className="text-sm text-slate-400">{u.email}</p>
                         <p className="text-xs text-slate-500">
                           Lvl {u.level} • {u.xp} XP • {u.balance?.toFixed(0)} coins
+                          {u.referred_by && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded border border-indigo-500/30">
+                              Promo: {u.referred_by}
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
