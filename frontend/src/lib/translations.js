@@ -136,6 +136,8 @@ export const translations = {
       verify: 'Тасдиқ кунед',
       codeSent: 'Код ба почтаи шумо фиристода шуд',
       invalidCode: 'Коди нодуруст ё мӯҳлати он гузаштааст',
+      promoCode: 'Промокод (ихтиёрӣ)',
+      promoCodePlaceholder: 'Масалан: SALE2026',
     },
     // Profile
     profile: {
@@ -406,6 +408,8 @@ export const translations = {
       verify: 'Подтвердить',
       codeSent: 'Код отправлен на вашу почту',
       invalidCode: 'Неверный код или срок действия истек',
+      promoCode: 'Промокод (необязательно)',
+      promoCodePlaceholder: 'Например: SALE2026',
     },
     // Profile
     profile: {
