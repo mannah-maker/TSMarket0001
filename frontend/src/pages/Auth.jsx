@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_tsmarket-shop/artifacts/ku1akclq_%D0%BB%D0%BE%D0%B3%D0%BE.jpg";
@@ -31,6 +31,7 @@ export const Auth = () => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirm, setRegisterConfirm] = useState('');
+  const [registerPromoCode, setRegisterPromoCode] = useState('');
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -84,7 +85,7 @@ export const Auth = () => {
     
     setLoading(true);
     try {
-      await register(registerEmail, registerPassword, registerName);
+      await register(registerEmail, registerPassword, registerName, registerPromoCode);
       toast.success(t('auth.codeSent'));
       setShowVerification(true);
     } catch (error) {
@@ -332,6 +333,22 @@ export const Auth = () => {
                       onChange={(e) => setRegisterConfirm(e.target.value)}
                       className="pl-10 tsmarket-input"
                       data-testid="register-confirm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="register-promo">{t('auth.promoCode')}</Label>
+                  <div className="relative mt-1">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="register-promo"
+                      type="text"
+                      placeholder={t('auth.promoCodePlaceholder')}
+                      value={registerPromoCode}
+                      onChange={(e) => setRegisterPromoCode(e.target.value.toUpperCase())}
+                      className="pl-10 tsmarket-input"
+                      data-testid="register-promo"
                     />
                   </div>
                 </div>
