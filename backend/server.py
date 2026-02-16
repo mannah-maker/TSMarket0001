@@ -348,10 +348,11 @@ class UserBase(BaseModel):
     email: EmailStr
     name: str
 
-class UserCreate(BaseModel):
+class UserCreate(UserBase):
     email: EmailStr
     password: str
     name: str
+    promo_code: Optional[str] = None
     
     @field_validator('password')
     @classmethod
@@ -392,6 +393,7 @@ class User(BaseModel):
     wheel_spins_available: int = 0
     claimed_rewards: List[int] = []
     last_bonus_claim: Optional[datetime] = None
+    referred_by: Optional[str] = None
     achievements: List[str] = []
     xp_multiplier_expires_at: Optional[datetime] = None
     created_at: datetime
@@ -994,6 +996,7 @@ async def register(data: UserCreate, response: Response):
         "name": data.name,
         "password_hash": hash_password(data.password),
         "verification_code": verification_code,
+        "promo_code": data.promo_code,
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -1041,6 +1044,7 @@ async def verify_code(data: VerifyCode, response: Response):
         "role": "user",
         "wheel_spins_available": 1,
         "claimed_rewards": [],
+        "referred_by": pending.get("promo_code"),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
