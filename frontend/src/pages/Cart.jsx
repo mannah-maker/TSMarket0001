@@ -29,8 +29,9 @@ export const Cart = () => {
   // Check if user is in TOP 10 (admins never count as TOP 10)
   const isTop10 = !user?.is_admin && user?.role !== 'admin' && (user?.is_top_10 || false);
 
-  // Level discount (1% per level, max 15%)
-  let levelDiscount = Math.min(user?.level || 1, 15);
+  // Level discount (1% per level up to level 10, then 0.5% per level, no max cap)
+  const userLevel = user?.level || 1;
+  let levelDiscount = userLevel <= 10 ? userLevel : 10 + (userLevel - 10) * 0.5;
   let currentPromoDiscount = promoDiscount;
 
   if (isTop10) {
