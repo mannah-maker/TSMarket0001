@@ -1431,8 +1431,11 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     current_user = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
     user_level = current_user.get("level", 1)
     
-    # Calculate level discount (1% per level, max 15%)
-    level_discount_percent = min(user_level, 15)
+    # Calculate level discount (1% per level up to level 10, then 0.5% per level, no max cap)
+    if user_level <= 10:
+        level_discount_percent = user_level
+    else:
+        level_discount_percent = 10 + (user_level - 10) * 0.5
 
     # Check if user is in TOP 10 for discount doubling
     is_top_10 = False
@@ -3034,7 +3037,8 @@ async def claim_daily_bonus(user: User = Depends(require_user)):
             raise HTTPException(status_code=400, detail=f"Бонус будет доступен через {hours}ч {minutes}м")
     
     settings = await db.admin_settings.find_one({"settings_id": "admin_settings"})
-    coins = settings.get("daily_bonus_coins", 10.0) if settings else 10.0
+    user_level = user_data.get("level", 1)
+    coins = (settings.get("daily_bonus_coins", 10.0) if settings else 10.0) * user_level
     xp = settings.get("daily_bonus_xp", 50) if settings else 50
     
     # Check for XP multiplier
