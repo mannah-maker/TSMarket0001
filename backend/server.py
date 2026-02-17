@@ -3039,7 +3039,7 @@ async def claim_daily_bonus(user: User = Depends(require_user)):
     settings = await db.admin_settings.find_one({"settings_id": "admin_settings"})
     user_level = user_data.get("level", 1)
     coins = (settings.get("daily_bonus_coins", 10.0) if settings else 10.0) * user_level
-    xp = settings.get("daily_bonus_xp", 50) if settings else 50
+    xp = (settings.get("daily_bonus_xp", 50) if settings else 50) * user_level
     
     # Check for XP multiplier
     xp_multiplier = 1
