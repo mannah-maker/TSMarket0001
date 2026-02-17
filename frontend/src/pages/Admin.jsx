@@ -1071,6 +1071,7 @@ export const Admin = () => {
               )}
             </TabsTrigger>
             {isAdmin && <TabsTrigger value="settings" data-testid="tab-settings">{t('admin.settings')}</TabsTrigger>}
+            <TabsTrigger value="themes" data-testid="tab-themes">Стили</TabsTrigger>
             <TabsTrigger value="discounts" data-testid="tab-discounts">Скидки</TabsTrigger>
             <TabsTrigger value="missions" data-testid="tab-missions">
               <Target className="w-4 h-4 mr-1" />
@@ -1440,129 +1441,7 @@ export const Admin = () => {
               </label>
             </div>
 
-            {/* Shop Theme Settings */}
-            <div className="admin-card">
-              <h3 className="font-bold mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
-                Стиль оформления магазина
-              </h3>
-              <p className="text-sm text-slate-400 mb-4">
-                Выберите праздничную тему, чтобы изменить баннеры и цвета магазина одним кликом.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {themes.map((theme) => (
-                  <div key={theme.theme_id} className="relative group">
-                    <button
-                      onClick={() => setAdminSettings({...adminSettings, active_theme: theme.theme_id})}
-                      className={`w-full p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                        (adminSettings.active_theme || 'default') === theme.theme_id 
-                          ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(13,148,136,0.3)]' 
-                          : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
-                      }`}
-                    >
-                      <span className="text-2xl">{theme.icon}</span>
-                      <span className="text-xs font-bold uppercase">{theme.name}</span>
-                      <div className="w-full h-1 rounded-full bg-primary/30" />
-                    </button>
-                    {!theme.is_system && (
-                      <button 
-                        onClick={() => handleDeleteTheme(theme.theme_id)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  onClick={() => setShowThemeForm(!showThemeForm)}
-                  className="p-3 rounded-xl border-2 border-dashed border-slate-700 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-primary"
-                >
-                  <Plus className="w-6 h-6" />
-                  <span className="text-xs font-bold uppercase">Добавить</span>
-                </button>
-              </div>
 
-              <div className="flex justify-end mb-6">
-                <Button 
-                  onClick={handleSaveSettings}
-                  className="tsmarket-btn-primary px-6"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Применить выбранную тему
-                </Button>
-              </div>
-
-              {showThemeForm && (
-                <form onSubmit={handleCreateTheme} className="space-y-4 p-4 border border-slate-700 rounded-xl bg-slate-800/30 mb-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Название темы</Label>
-                      <Input 
-                        value={newTheme.name} 
-                        onChange={e => setNewTheme({...newTheme, name: e.target.value})}
-                        placeholder="Напр: Весенний стиль"
-                        className="admin-input"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label>Иконка (Emoji)</Label>
-                      <Input 
-                        value={newTheme.icon} 
-                        onChange={e => setNewTheme({...newTheme, icon: e.target.value})}
-                        placeholder="🌸"
-                        className="admin-input"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label>URL Баннера (Hero Image)</Label>
-                      <Input 
-                        value={newTheme.hero_image} 
-                        onChange={e => setNewTheme({...newTheme, hero_image: e.target.value})}
-                        placeholder="https://images.unsplash.com/..."
-                        className="admin-input"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label>Gradient (Tailwind classes)</Label>
-                      <Input 
-                        value={newTheme.gradient} 
-                        onChange={e => setNewTheme({...newTheme, gradient: e.target.value})}
-                        placeholder="bg-gradient-to-br from-green-400 to-blue-500"
-                        className="admin-input"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label>Цвет заголовка (Tailwind class)</Label>
-                      <Input 
-                        value={newTheme.title_color} 
-                        onChange={e => setNewTheme({...newTheme, title_color: e.target.value})}
-                        placeholder="text-green-500"
-                        className="admin-input"
-                        required
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Label>Тэглайн (Текст в бабле)</Label>
-                      <Input 
-                        value={newTheme.tagline} 
-                        onChange={e => setNewTheme({...newTheme, tagline: e.target.value})}
-                        placeholder="🌸 Весенние скидки!"
-                        className="admin-input"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button type="submit" className="flex-1">Создать тему</Button>
-                    <Button type="button" variant="outline" onClick={() => setShowThemeForm(false)}>Отмена</Button>
-                  </div>
-                </form>
-              )}
-            </div>
 
             <Button onClick={handleSaveSettings} className="w-full" data-testid="save-settings-btn">
               {t('admin.saveSettings')}
@@ -2095,6 +1974,132 @@ export const Admin = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </TabsContent>
+
+          {/* Themes Tab */}
+          <TabsContent value="themes" className="space-y-6">
+            <div className="admin-card">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-400" />
+                Стиль оформления магазина
+              </h3>
+              <p className="text-sm text-slate-400 mb-4">
+                Выберите праздничную тему, чтобы изменить баннеры и цвета магазина одним кликом.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                {themes.map((theme) => (
+                  <div key={theme.theme_id} className="relative group">
+                    <button
+                      onClick={() => setAdminSettings({...adminSettings, active_theme: theme.theme_id})}
+                      className={`w-full p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
+                        (adminSettings.active_theme || 'default') === theme.theme_id 
+                          ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(13,148,136,0.3)]' 
+                          : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
+                      }`}
+                    >
+                      <span className="text-2xl">{theme.icon}</span>
+                      <span className="text-xs font-bold uppercase">{theme.name}</span>
+                      <div className="w-full h-1 rounded-full bg-primary/30" />
+                    </button>
+                    {!theme.is_system && (
+                      <button 
+                        onClick={() => handleDeleteTheme(theme.theme_id)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setShowThemeForm(!showThemeForm)}
+                  className="p-3 rounded-xl border-2 border-dashed border-slate-700 hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-primary"
+                >
+                  <Plus className="w-6 h-6" />
+                  <span className="text-xs font-bold uppercase">Добавить</span>
+                </button>
+              </div>
+
+              <div className="flex justify-end mb-6">
+                <Button 
+                  onClick={handleSaveSettings}
+                  className="tsmarket-btn-primary px-6"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Применить выбранную тему
+                </Button>
+              </div>
+
+              {showThemeForm && (
+                <form onSubmit={handleCreateTheme} className="space-y-4 p-4 border border-slate-700 rounded-xl bg-slate-800/30 mb-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Название темы</Label>
+                      <Input 
+                        value={newTheme.name} 
+                        onChange={e => setNewTheme({...newTheme, name: e.target.value})}
+                        placeholder="Напр: Весенний стиль"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Иконка (Emoji)</Label>
+                      <Input 
+                        value={newTheme.icon} 
+                        onChange={e => setNewTheme({...newTheme, icon: e.target.value})}
+                        placeholder="🌸"
+                        className="admin-input"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>URL Баннера (Hero Image)</Label>
+                      <Input 
+                        value={newTheme.hero_image} 
+                        onChange={e => setNewTheme({...newTheme, hero_image: e.target.value})}
+                        placeholder="https://images.unsplash.com/..."
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Gradient (Tailwind classes)</Label>
+                      <Input 
+                        value={newTheme.gradient} 
+                        onChange={e => setNewTheme({...newTheme, gradient: e.target.value})}
+                        placeholder="bg-gradient-to-br from-green-400 to-blue-500"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Цвет заголовка (Tailwind class)</Label>
+                      <Input 
+                        value={newTheme.title_color} 
+                        onChange={e => setNewTheme({...newTheme, title_color: e.target.value})}
+                        placeholder="text-green-500"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Тэглайн (Текст в бабле)</Label>
+                      <Input 
+                        value={newTheme.tagline} 
+                        onChange={e => setNewTheme({...newTheme, tagline: e.target.value})}
+                        placeholder="🌸 Весенние скидки!"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="flex-1">Создать тему</Button>
+                    <Button type="button" variant="outline" onClick={() => setShowThemeForm(false)}>Отмена</Button>
+                  </div>
+                </form>
+              )}
             </div>
           </TabsContent>
 
