@@ -7,12 +7,19 @@ def verify_server_changes():
     with open(server_path, 'r') as f:
         content = f.read()
     
-    # Check daily bonus change
-    bonus_check = 'coins = (settings.get("daily_bonus_coins", 10.0) if settings else 10.0) * user_level'
-    if bonus_check in content:
-        print("✅ Daily bonus multiplication logic found in server.py")
+    # Check daily bonus coins change
+    bonus_coins_check = 'coins = (settings.get("daily_bonus_coins", 10.0) if settings else 10.0) * user_level'
+    if bonus_coins_check in content:
+        print("✅ Daily bonus coins multiplication logic found in server.py")
     else:
-        print("❌ Daily bonus multiplication logic NOT found in server.py")
+        print("❌ Daily bonus coins multiplication logic NOT found in server.py")
+
+    # Check daily bonus XP change
+    bonus_xp_check = 'xp = (settings.get("daily_bonus_xp", 50) if settings else 50) * user_level'
+    if bonus_xp_check in content:
+        print("✅ Daily bonus XP multiplication logic found in server.py")
+    else:
+        print("❌ Daily bonus XP multiplication logic NOT found in server.py")
         
     # Check level discount change
     discount_check = 'level_discount_percent = 10 + (user_level - 10) * 0.5'
