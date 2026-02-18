@@ -256,6 +256,10 @@
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
 }
 
+.ramadan_holiday {
+    background: linear-gradient(135deg, #065f46 0%, #0d4a2d 100%) !important;
+}
+
 .men_day {
     background: linear-gradient(135deg, #2d3436 0%, #636e72 100%) !important;
 }
