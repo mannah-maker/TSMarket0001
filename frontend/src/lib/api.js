@@ -168,6 +168,8 @@ export const adminAPI = {
   createDeliveryMethod: (data) => api.post('/admin/delivery-methods', data),
   updateDeliveryMethod: (id, data) => api.put(`/admin/delivery-methods/${id}`, data),
   deleteDeliveryMethod: (id) => api.delete(`/admin/delivery-methods/${id}`),
+  // AI Assistant
+  analyzeProduct: (prompt) => api.post('/ai/analyze-product', { prompt }),
 };
 
 // Delivery API
