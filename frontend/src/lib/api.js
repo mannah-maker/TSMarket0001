@@ -52,11 +52,12 @@ export const reviewsAPI = {
 };
 // Orders API
 export const ordersAPI = {
-  create: (items, deliveryAddress, phoneNumber, promoCode = null) => api.post('/orders', { 
+  create: (items, deliveryAddress, phoneNumber, promoCode = null, deliveryMethodId = null) => api.post('/orders', { 
     items, 
     delivery_address: deliveryAddress,
     phone_number: phoneNumber,
-    promo_code: promoCode
+    promo_code: promoCode,
+    delivery_method_id: deliveryMethodId
   }),
   getAll: () => api.get('/orders'),
   track: (orderId) => api.get(`/orders/${orderId}/track`),
@@ -162,6 +163,11 @@ export const adminAPI = {
   getThemes: () => api.get('/themes'),
   createTheme: (data) => api.post('/admin/themes', data),
   deleteTheme: (id) => api.delete(`/admin/themes/${id}`),
+  // Delivery Methods
+  getDeliveryMethods: () => api.get('/admin/delivery-methods'),
+  createDeliveryMethod: (data) => api.post('/admin/delivery-methods', data),
+  updateDeliveryMethod: (id, data) => api.put(`/admin/delivery-methods/${id}`, data),
+  deleteDeliveryMethod: (id) => api.delete(`/admin/delivery-methods/${id}`),
 };
 
 // Delivery API
