@@ -43,6 +43,7 @@ export const Admin = () => {
   const [supportTickets, setSupportTickets] = useState([]);
   const [bankCards, setBankCards] = useState([]);
   const [themes, setThemes] = useState([]);
+  const [deliveryMethods, setDeliveryMethods] = useState([]);
 
   // Form states
   const [newProduct, setNewProduct] = useState({ 
@@ -60,6 +61,9 @@ export const Admin = () => {
   const [newBankCard, setNewBankCard] = useState({ card_number: '', card_holder: '', bank_name: '' });
   const [newTheme, setNewTheme] = useState({ name: '', icon: '🎨', hero_image: '', gradient: '', title_color: '', tagline: '' });
   const [showThemeForm, setShowThemeForm] = useState(false);
+  const [newDeliveryMethod, setNewDeliveryMethod] = useState({ name: '', description: '', cost: 0, delivery_days: 1 });
+  const [editingDeliveryMethod, setEditingDeliveryMethod] = useState(null);
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [productImages, setProductImages] = useState([]);
   const [imageUrls, setImageUrls] = useState(['']);
   
@@ -164,6 +168,12 @@ export const Admin = () => {
         themesData = themesRes.data;
       } catch (e) {}
 
+      let deliveryMethodsData = [];
+      try {
+        const deliveryRes = await adminAPI.getDeliveryMethods();
+        deliveryMethodsData = deliveryRes.data;
+      } catch (e) {}
+
       setStats(statsRes.data);
       setUsers(usersRes.data);
       setProducts(productsRes.data);
@@ -181,6 +191,7 @@ export const Admin = () => {
       setSupportTickets(ticketsData);
       setBankCards(cardsData);
       setThemes(themesData);
+      setDeliveryMethods(deliveryMethodsData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Ошибка загрузки данных');
@@ -849,7 +860,45 @@ export const Admin = () => {
     }
   };
 
+  // Delivery Methods handlers
+  const handleCreateDeliveryMethod = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingDeliveryMethod) {
+        await adminAPI.updateDeliveryMethod(editingDeliveryMethod.method_id, newDeliveryMethod);
+        toast.success('Способ доставки обновлен');
+        setEditingDeliveryMethod(null);
+      } else {
+        await adminAPI.createDeliveryMethod(newDeliveryMethod);
+        toast.success('Способ доставки создан');
+      }
+      setNewDeliveryMethod({ name: '', description: '', cost: 0, delivery_days: 1 });
+      fetchAllData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ошибка сохранения способа доставки');
+    }
+  };
 
+  const handleDeleteDeliveryMethod = async (id) => {
+    if (!window.confirm('Удалить этот способ доставки?')) return;
+    try {
+      await adminAPI.deleteDeliveryMethod(id);
+      toast.success('Способ доставки удален');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка удаления');
+    }
+  };
+
+  const handleToggleDeliveryMethod = async (id, newStatus) => {
+    try {
+      await adminAPI.updateDeliveryMethod(id, { is_active: newStatus });
+      toast.success(newStatus ? 'Способ активирован' : 'Способ деактивирован');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Ошибка обновления');
+    }
+  };
 
   // Image upload handler
   const handleImageUpload = (e) => {
@@ -1085,6 +1134,12 @@ export const Admin = () => {
               <TabsTrigger value="bank-cards" data-testid="tab-bank-cards">
                 <CreditCard className="w-4 h-4 mr-1" />
                 Карты
+              </TabsTrigger>
+            )}
+            {isAdmin && (
+              <TabsTrigger value="delivery" data-testid="tab-delivery">
+                <Truck className="w-4 h-4 mr-1" />
+                Доставка
               </TabsTrigger>
             )}
             <TabsTrigger value="support" data-testid="tab-support" className="relative">
@@ -2510,6 +2565,149 @@ export const Admin = () => {
               </div>
             </div>
           </TabsContent>
+
+          {/* Delivery Methods Tab */}
+          {isAdmin && (
+            <TabsContent value="delivery" className="space-y-6">
+              <div className="admin-card" data-testid="delivery-form">
+                <h3 className="font-bold mb-4 flex items-center gap-2">
+                  {editingDeliveryMethod ? <Edit className="w-4 h-4" /> : <Plus className="w-4 h-4" />} 
+                  {editingDeliveryMethod ? 'Редактировать способ доставки' : 'Создать способ доставки'}
+                </h3>
+                <form onSubmit={handleCreateDeliveryMethod} className="grid md:grid-cols-4 gap-4">
+                  <div>
+                    <Label>Название</Label>
+                    <Input
+                      placeholder="Например: Курьер, Самовывоз"
+                      value={newDeliveryMethod.name}
+                      onChange={(e) => setNewDeliveryMethod({...newDeliveryMethod, name: e.target.value})}
+                      className="admin-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Описание</Label>
+                    <Input
+                      placeholder="Описание способа доставки"
+                      value={newDeliveryMethod.description}
+                      onChange={(e) => setNewDeliveryMethod({...newDeliveryMethod, description: e.target.value})}
+                      className="admin-input"
+                    />
+                  </div>
+                  <div>
+                    <Label>Стоимость (coins)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={newDeliveryMethod.cost}
+                      onChange={(e) => setNewDeliveryMethod({...newDeliveryMethod, cost: parseFloat(e.target.value) || 0})}
+                      className="admin-input"
+                      required
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>Дней доставки</Label>
+                    <Input
+                      type="number"
+                      placeholder="1"
+                      value={newDeliveryMethod.delivery_days}
+                      onChange={(e) => setNewDeliveryMethod({...newDeliveryMethod, delivery_days: parseInt(e.target.value) || 1})}
+                      className="admin-input"
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button type="submit" className="flex-1">
+                      {editingDeliveryMethod ? 'Обновить' : 'Создать'}
+                    </Button>
+                    {editingDeliveryMethod && (
+                      <Button type="button" variant="outline" onClick={() => {
+                        setEditingDeliveryMethod(null);
+                        setNewDeliveryMethod({ name: '', description: '', cost: 0, delivery_days: 1 });
+                      }}>
+                        Отмена
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              <div className="admin-card">
+                <h3 className="font-bold mb-4">Способы доставки ({deliveryMethods.length})</h3>
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                  {deliveryMethods.length === 0 ? (
+                    <p className="text-slate-400 text-center py-8">Способы доставки не добавлены</p>
+                  ) : (
+                    deliveryMethods.map((method) => (
+                      <div key={method.method_id} className="p-4 bg-slate-700/50 rounded-xl border border-slate-600 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="font-bold text-lg">{method.name}</p>
+                            {method.description && <p className="text-sm text-slate-400">{method.description}</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                              method.is_active ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'
+                            }`}>
+                              {method.is_active ? 'Активно' : 'Неактивно'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-4 mb-3 text-sm">
+                          <div>
+                            <p className="text-slate-400">Стоимость</p>
+                            <p className="font-bold text-primary">{method.cost} coins</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-400">Время доставки</p>
+                            <p className="font-bold">{method.delivery_days} дн.</p>
+                          </div>
+                          <div>
+                            <p className="text-slate-400">Создано</p>
+                            <p className="font-bold text-xs">{new Date(method.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setEditingDeliveryMethod(method);
+                              setNewDeliveryMethod({
+                                name: method.name,
+                                description: method.description || '',
+                                cost: method.cost,
+                                delivery_days: method.delivery_days
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Редактировать
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleToggleDeliveryMethod(method.method_id, !method.is_active)}
+                          >
+                            {method.is_active ? 'Деактивировать' : 'Активировать'}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => handleDeleteDeliveryMethod(method.method_id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          )}
 
           {/* Missions Tab */}
           <TabsContent value="missions" className="space-y-6">
