@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Label } from '../components/ui/label';
 import { Button } from '../components/ui/button';
@@ -7,7 +7,7 @@ import { Textarea } from '../components/ui/textarea';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
-import { ordersAPI, promoAPI } from '../lib/api';
+import { ordersAPI, promoAPI, adminAPI } from '../lib/api';
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Wallet, Sparkles, ShoppingBag, MapPin, Phone, Clock, Tag, CheckCircle, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +23,26 @@ export const Cart = () => {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoValid, setPromoValid] = useState(false);
   const [promoLoading, setPromoLoading] = useState(false);
+  const [deliveryMethods, setDeliveryMethods] = useState([]);
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState(null);
+  const [deliveryMethodsLoading, setDeliveryMethodsLoading] = useState(false);
+  const [deliveryCost, setDeliveryCost] = useState(0);
+
+  // Load delivery methods on component mount
+  useEffect(() => {
+    const loadDeliveryMethods = async () => {
+      try {
+        setDeliveryMethodsLoading(true);
+        const res = await adminAPI.getDeliveryMethods();
+        setDeliveryMethods(res.data || []);
+      } catch (error) {
+        console.error('Failed to load delivery methods:', error);
+      } finally {
+        setDeliveryMethodsLoading(false);
+      }
+    };
+    loadDeliveryMethods();
+  }, []);
 
   // Check if user is in TOP 10 (this would ideally come from the user object or a separate API call)
   // For the frontend display, we'll assume the user knows if they are in TOP 10 or we can check their rank if available
@@ -44,7 +64,8 @@ export const Cart = () => {
   const levelDiscountAmount = subtotal * (levelDiscount / 100);
   const afterLevelDiscount = subtotal - levelDiscountAmount;
   const promoDiscountAmount = afterLevelDiscount * (currentPromoDiscount / 100);
-  const finalTotal = Math.round((afterLevelDiscount - promoDiscountAmount) * 100) / 100;
+  const beforeDelivery = Math.round((afterLevelDiscount - promoDiscountAmount) * 100) / 100;
+  const finalTotal = Math.round((beforeDelivery + deliveryCost) * 100) / 100;
   const totalSaved = Math.round((levelDiscountAmount + promoDiscountAmount) * 100) / 100;
 
   const validatePromo = async () => {
@@ -102,7 +123,7 @@ export const Cart = () => {
         custom_request: item.customRequest,
       }));
 
-      const res = await ordersAPI.create(orderItems, deliveryAddress.trim(), phoneNumber.trim(), promoValid ? promoCode.trim() : null);
+      const res = await ordersAPI.create(orderItems, deliveryAddress.trim(), phoneNumber.trim(), promoValid ? promoCode.trim() : null, selectedDeliveryMethod);
       const { xp_gained, level_up, new_level, discount_applied } = res.data;
 
       clearCart();
@@ -318,6 +339,15 @@ export const Cart = () => {
                     )}
                   </div>
 
+                  {deliveryCost > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span className="flex items-center gap-1">
+                        Стоимость доставки
+                      </span>
+                      <span className="font-bold">+{deliveryCost}</span>
+                    </div>
+                  )}
+
                   <div className="border-t pt-3 flex justify-between items-end">
                     <span className="font-bold">{t('cart.total')}</span>
                     <div className="text-right">
@@ -369,6 +399,47 @@ export const Cart = () => {
                       />
                     </div>
                   </div>
+
+                  {deliveryMethods.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase text-muted-foreground">
+                        Способ доставки (опционально)
+                      </Label>
+                      <div className="space-y-2">
+                        {deliveryMethodsLoading ? (
+                          <p className="text-sm text-muted-foreground">Загружаются способы...</p>
+                        ) : (
+                          deliveryMethods.map((method) => (
+                            <div
+                              key={method.method_id}
+                              className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                selectedDeliveryMethod === method.method_id
+                                  ? 'border-primary bg-primary/5'
+                                  : 'border-slate-200 hover:border-primary/50'
+                              }`}
+                              onClick={() => {
+                                setSelectedDeliveryMethod(method.method_id);
+                                setDeliveryCost(method.cost);
+                              }}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="font-bold text-sm">{method.name}</p>
+                                  {method.description && (
+                                    <p className="text-xs text-muted-foreground">{method.description}</p>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Доставка: {method.delivery_days} дн.
+                                  </p>
+                                </div>
+                                <p className="font-bold text-primary ml-2 whitespace-nowrap">{method.cost} coins</p>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-2">
                     <div className="flex justify-between text-sm mb-2">
