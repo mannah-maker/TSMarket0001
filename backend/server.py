@@ -507,6 +507,7 @@ class CreateOrderRequest(BaseModel):
     delivery_address: str
     phone_number: str
     promo_code: Optional[str] = None
+    delivery_method_id: Optional[str] = None  # For out-of-stock items
 
 class OrderItem(BaseModel):
     product_id: str
@@ -539,8 +540,35 @@ class Order(BaseModel):
     status_history: List[dict] = []  # History of status changes
     admin_note: Optional[str] = None
     delivery_user_id: Optional[str] = None  # ID of the delivery person who took the order
+    delivery_method_id: Optional[str] = None  # ID of selected delivery method for out-of-stock items
+    delivery_cost: float = 0.0  # Cost of delivery for out-of-stock items
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
+
+# Delivery Method model for out-of-stock items
+class DeliveryMethod(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    method_id: str = Field(default_factory=lambda: f"delm_{uuid.uuid4().hex[:12]}")
+    name: str
+    description: Optional[str] = None
+    cost: float
+    delivery_days: int
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+class DeliveryMethodCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    cost: float
+    delivery_days: int
+
+class DeliveryMethodUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cost: Optional[float] = None
+    delivery_days: Optional[int] = None
+    is_active: Optional[bool] = None
 
 # Promo Code model
 class PromoCode(BaseModel):
@@ -1520,6 +1548,22 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
     total = round(total, 2)
     total_discount = round(total_discount, 2)
     
+    # Handle delivery method for out-of-stock items
+    delivery_method_id = data.delivery_method_id
+    delivery_cost = 0.0
+    if delivery_method_id:
+        delivery_method = await db.delivery_methods.find_one(
+            {"method_id": delivery_method_id, "is_active": True},
+            {"_id": 0}
+        )
+        if not delivery_method:
+            raise HTTPException(status_code=400, detail="Delivery method not found or inactive")
+        delivery_cost = delivery_method.get("cost", 0.0)
+        total += delivery_cost
+    
+    # Round total after adding delivery cost
+    total = round(total, 2)
+    
     # Check balance
     if current_user["balance"] < total:
         raise HTTPException(status_code=400, detail="Insufficient balance")
@@ -1535,6 +1579,8 @@ async def create_order(data: CreateOrderRequest, user: User = Depends(require_us
         phone_number=phone_number.strip(),
         discount_applied=total_discount,
         promo_code=promo_code.upper() if promo_code else None,
+        delivery_method_id=delivery_method_id,
+        delivery_cost=delivery_cost,
         status_history=[{
             "status": "pending",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -3495,6 +3541,103 @@ async def delete_theme(theme_id: str, user: User = Depends(require_admin)):
         
     await db.themes.delete_one({"theme_id": theme_id})
     return {"message": "Тема удалена"}
+
+# ==================== DELIVERY METHODS API ====================
+
+@api_router.get("/delivery-methods")
+async def get_delivery_methods():
+    """Get all active delivery methods"""
+    methods = await db.delivery_methods.find(
+        {"is_active": True},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(None)
+    return methods
+
+@api_router.get("/admin/delivery-methods")
+async def admin_get_delivery_methods(user: User = Depends(require_admin)):
+    """Admin: Get all delivery methods (including inactive)"""
+    methods = await db.delivery_methods.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(None)
+    return methods
+
+@api_router.post("/admin/delivery-methods", response_model=DeliveryMethod)
+async def create_delivery_method(data: DeliveryMethodCreate, user: User = Depends(require_admin)):
+    """Admin: Create a new delivery method"""
+    # Validate input
+    if not data.name or len(data.name.strip()) < 2:
+        raise HTTPException(status_code=400, detail="Delivery method name is required")
+    
+    if data.cost < 0:
+        raise HTTPException(status_code=400, detail="Delivery cost cannot be negative")
+    
+    if data.delivery_days <= 0:
+        raise HTTPException(status_code=400, detail="Delivery days must be positive")
+    
+    method = DeliveryMethod(
+        name=data.name.strip(),
+        description=data.description.strip() if data.description else None,
+        cost=round(data.cost, 2),
+        delivery_days=data.delivery_days,
+        is_active=True
+    )
+    method_dict = method.model_dump()
+    method_dict["created_at"] = method_dict["created_at"].isoformat()
+    method_dict["updated_at"] = method_dict["updated_at"].isoformat() if method_dict["updated_at"] else None
+    
+    await db.delivery_methods.insert_one(method_dict)
+    method_dict.pop("_id", None)
+    return method_dict
+
+@api_router.put("/admin/delivery-methods/{method_id}", response_model=DeliveryMethod)
+async def update_delivery_method(method_id: str, data: DeliveryMethodUpdate, user: User = Depends(require_admin)):
+    """Admin: Update a delivery method"""
+    method = await db.delivery_methods.find_one({"method_id": method_id}, {"_id": 0})
+    if not method:
+        raise HTTPException(status_code=404, detail="Delivery method not found")
+    
+    # Prepare update data
+    update_data = {}
+    if data.name is not None:
+        if len(data.name.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Delivery method name is required")
+        update_data["name"] = data.name.strip()
+    
+    if data.description is not None:
+        update_data["description"] = data.description.strip() if data.description else None
+    
+    if data.cost is not None:
+        if data.cost < 0:
+            raise HTTPException(status_code=400, detail="Delivery cost cannot be negative")
+        update_data["cost"] = round(data.cost, 2)
+    
+    if data.delivery_days is not None:
+        if data.delivery_days <= 0:
+            raise HTTPException(status_code=400, detail="Delivery days must be positive")
+        update_data["delivery_days"] = data.delivery_days
+    
+    if data.is_active is not None:
+        update_data["is_active"] = data.is_active
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.delivery_methods.update_one(
+            {"method_id": method_id},
+            {"$set": update_data}
+        )
+    
+    # Return updated method
+    updated_method = await db.delivery_methods.find_one({"method_id": method_id}, {"_id": 0})
+    return updated_method
+
+@api_router.delete("/admin/delivery-methods/{method_id}")
+async def delete_delivery_method(method_id: str, user: User = Depends(require_admin)):
+    """Admin: Delete a delivery method"""
+    result = await db.delivery_methods.delete_one({"method_id": method_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Delivery method not found")
+    return {"message": "Delivery method deleted"}
 
 # Include router
 app.include_router(api_router)
