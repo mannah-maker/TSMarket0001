@@ -90,6 +90,11 @@ export const Admin = () => {
   const [isEditingRevenue, setIsEditingRevenue] = useState(false);
   const [newRevenueValue, setNewRevenueValue] = useState('');
   const [isSwitchingTheme, setIsSwitchingTheme] = useState(false);
+  
+  // AI Assistant state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking permissions
@@ -201,6 +206,42 @@ export const Admin = () => {
   };
 
   // Product handlers
+  const handleAiAnalyze = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Введите описание товара');
+      return;
+    }
+    
+    setIsAiAnalyzing(true);
+    try {
+      const response = await adminAPI.analyzeProduct(aiPrompt);
+      setAiResult(response.data);
+      toast.success('ИИ проанализировал запрос!');
+    } catch (error) {
+      console.error('AI Analysis failed:', error);
+      toast.error('Ошибка анализа ИИ');
+    } finally {
+      setIsAiAnalyzing(false);
+    }
+  };
+
+  const applyAiResult = () => {
+    if (!aiResult) return;
+    
+    setNewProduct({
+      ...newProduct,
+      ...aiResult.suggested_product,
+      // Ensure category exists in our list
+      category_id: categories.find(c => c._id === aiResult.suggested_product.category_id)?._id || categories[0]?._id || ''
+    });
+    
+    // Switch to products tab
+    const productsTab = document.querySelector('[data-value="products"]');
+    if (productsTab) productsTab.click();
+    
+    toast.success('Данные применены! Проверьте и сохраните товар.');
+  };
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
@@ -2988,6 +3029,91 @@ export const Admin = () => {
                   ))
                 )}
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="ai-assistant">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <h2 className="text-xl font-bold flex items-center mb-4">
+                  <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
+                  Добавить товар через ИИ
+                </h2>
+                <p className="text-slate-400 mb-4">
+                  Опишите товар своими словами. ИИ проанализирует рынок и предложит оптимальную цену, категорию и описание.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="ai-prompt">Описание товара</Label>
+                    <textarea
+                      id="ai-prompt"
+                      className="w-full h-32 bg-slate-800 border-slate-700 rounded-md p-3 mt-1 text-white focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Например: Добавь кроссовки Nike Air Max 270, цвет белый, размер 41-44, цена должна быть конкурентной..."
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700" 
+                    onClick={handleAiAnalyze}
+                    disabled={isAiAnalyzing}
+                  >
+                    {isAiAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Анализирую...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Проанализировать
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {aiResult && (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 animate-in fade-in slide-in-from-right-4">
+                  <h2 className="text-xl font-bold flex items-center mb-4">
+                    <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                    Результат анализа
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
+                      <h3 className="font-bold text-purple-400 mb-1">Предложенная цена: {aiResult.suggested_product.price} монет</h3>
+                      <p className="text-sm text-slate-300 italic">"{aiResult.market_analysis}"</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-slate-500">Название:</span>
+                        <p className="font-medium">{aiResult.suggested_product.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Категория:</span>
+                        <p className="font-medium">
+                          {categories.find(c => c._id === aiResult.suggested_product.category_id)?.name || 'Неизвестно'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-sm">
+                      <span className="text-slate-500">Описание:</span>
+                      <p className="line-clamp-3 text-slate-300">{aiResult.suggested_product.description}</p>
+                    </div>
+
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700" 
+                      onClick={applyAiResult}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Применить данные в форму
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
