@@ -471,12 +471,21 @@ class ProductCreate(BaseModel):
     price: float
     xp_reward: int = 10
     category_id: str
-    image_url: str = ""  # Can be empty if images provided
-    images: List[str] = []  # Base64 or URLs
-    sizes: List[str] = []
+    image_url: str
+    images: List[str] = []
+    sizes: Optional[List[str]] = None
+    colors: Optional[List[str]] = None
     stock: int = 100
     in_stock: bool = True
     arrival_date: Optional[str] = None
+
+class AIProductAnalysisRequest(BaseModel):
+    prompt: str
+
+class AIProductAnalysisResponse(BaseModel):
+    suggested_product: ProductCreate
+    market_analysis: str
+    confidence: float= None
     discount_percent: float = 0.0
     tags: List[str] = []
 
@@ -1393,6 +1402,71 @@ async def get_product(product_id: str):
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
+@api_router.post("/ai/analyze-product", response_model=AIProductAnalysisResponse)
+async def ai_analyze_product(request: AIProductAnalysisRequest, user: User = Depends(require_helper_or_admin)):
+    """AI analyzes market prices and extracts product data from prompt"""
+    
+    # 1. Get existing products for market analysis
+    all_products = await db.products.find().to_list(1000)
+    
+    # Prepare market data for AI
+    market_data = []
+    for p in all_products:
+        market_data.append({
+            "name": p.get("name"),
+            "category_id": p.get("category_id"),
+            "price": p.get("price")
+        })
+    
+    # 2. Get categories to help AI choose the right one
+    categories = await db.categories.find().to_list(100)
+    categories_info = [{"id": str(c["_id"]), "name": c.get("name")} for c in categories]
+
+    # 3. Call AI
+    from openai import OpenAI
+    client_ai = OpenAI() # Uses environment variables
+    
+    system_prompt = f"""
+    You are an AI assistant for a marketplace admin. 
+    Your task is to extract product information from the admin's prompt and analyze market prices.
+    
+    Current market products: {market_data[:50]} (truncated)
+    Available categories: {categories_info}
+    
+    Return a JSON object with:
+    1. 'suggested_product': An object matching the ProductCreate model.
+       - name, name_ru, name_tj (translate if needed)
+       - description, description_ru, description_tj (translate if needed)
+       - price (suggest based on market or use admin's if specified)
+       - category_id (choose from available categories)
+       - xp_reward (default 10)
+       - image_url (leave empty if not specified)
+       - images (empty list if not specified)
+       - sizes, colors (extract if mentioned)
+       - stock (default 100)
+    2. 'market_analysis': A brief explanation of why you suggested this price.
+    3. 'confidence': A value between 0 and 1.
+    
+    Respond ONLY with valid JSON.
+    """
+    
+    try:
+        response = client_ai.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": request.prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        import json
+        result = json.loads(response.choices[0].message.content)
+        return result
+    except Exception as e:
+        logging.error(f"AI Analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
 
 @api_router.post("/products", response_model=Product)
 async def create_product(data: ProductCreate, user: User = Depends(require_helper_or_admin)):
